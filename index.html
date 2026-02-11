@@ -1057,58 +1057,91 @@
       if(t=='register') loadAttendanceRegister();
       else loadAttendanceReview();
   }
-
-  async function loadAttendanceRegister() {
-      const date = document.getElementById('attDate').value;
-      const siteId = document.getElementById('attSite').value;
-      
-      if(!date) return;
-      
-      // Get workers for this site
-      let query = sb.from('workers').select('*').eq('is_active',true);
-      if(siteId) query = query.eq('current_site_id',siteId);
-      else if(CUR_USER.role !== 'admin') query = query.in('current_site_id', CUR_USER.sites.length > 0 ? CUR_USER.sites : [0]);
-      
-      const {data:workers} = await query;
-      
-      // Get existing attendance for this date
-      const {data:existingAtt} = await sb.from('attendance').select('*').eq('date',date);
-      const existingIds = existingAtt ? existingAtt.map(a => a.worker_id) : [];
-      
-      // Filter out already registered
-      const pendingWorkers = workers ? workers.filter(w => !existingIds.includes(w.id)) : [];
-      
-      document.getElementById('attendanceRegisterList').innerHTML = pendingWorkers.map(w => `
+async function loadAttendanceRegister() {
+    const date = document.getElementById('attDate').value;
+    const siteId = document.getElementById('attSite').value;
+    
+    if(!date) return;
+    
+    showLoad(true);
+    
+    // Get workers for this site
+    let query = sb.from('workers').select('*').eq('is_active',true);
+    if(siteId) query = query.eq('current_site_id',siteId);
+    else if(CUR_USER.role !== 'admin') query = query.in('current_site_id', CUR_USER.sites.length > 0 ? CUR_USER.sites : [0]);
+    
+    const {data:workers} = await query;
+    
+    // Get existing attendance for this date (ALL sites to prevent duplicates across sites)
+    let attQuery = sb.from('attendance').select('worker_id').eq('date',date);
+    const {data:existingAtt} = await attQuery;
+    const existingIds = existingAtt ? existingAtt.map(a => a.worker_id) : [];
+    
+    // Filter out already registered workers
+    const pendingWorkers = workers ? workers.filter(w => !existingIds.includes(w.id)) : [];
+    
+    document.getElementById('attendanceRegisterList').innerHTML = pendingWorkers.length > 0 
+        ? pendingWorkers.map(w => `
       <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:15px;">
           <div>
               <b>${w.name}</b><br>
-              <small style="color:var(--text-light);">${w.id_number}</small>
+              <small style="color:var(--text-light);">${w.id_number} | ${w.sites?.name || ''}</small>
           </div>
           <div class="flex-row">
               <button onclick="registerAttendance(${w.id},'present')" class="attendance-btn att-present">حاضر</button>
               <button onclick="registerAttendance(${w.id},'absent')" class="attendance-btn att-absent">غائب</button>
               <button onclick="registerAttendance(${w.id},'half')" class="attendance-btn att-half">نصف يوم</button>
           </div>
-      </div>`).join('') || '<p style="text-align:center; color:var(--text-light);">لا يوجد عمال للتسجيل</p>';
-  }
-
-  async function registerAttendance(workerId, status) {
-      const date = document.getElementById('attDate').value;
-      const siteId = document.getElementById('attSite').value;
-      
-      showLoad(true);
-      await sb.from('attendance').insert({
-          worker_id: workerId,
-          date: date,
-          site_id: siteId || null,
-          status: status,
-          recorded_by: CUR_USER.id,
-          is_approved: false
-      });
-      showLoad(false);
-      showToast('تم تسجيل الحضور');
-      loadAttendanceRegister();
-  }
+      </div>`).join('')
+        : '<div class="card" style="text-align:center; padding:40px; color:var(--text-light);"><i class="fa-solid fa-check-circle fa-3x" style="color:var(--green); margin-bottom:15px;"></i><br>تم تسجيل حضور جميع العمال لهذا اليوم</div>';
+    
+    showLoad(false);
+}async function registerAttendance(workerId, status) {
+    const date = document.getElementById('attDate').value;
+    const siteId = document.getElementById('attSite').value;
+    
+    // Check if already registered (double check)
+    const {data:existing} = await sb.from('attendance')
+        .select('id')
+        .eq('worker_id',workerId)
+        .eq('date',date)
+        .single();
+    
+    if(existing) {
+        showToast('هذا العامل مسجل حضوره مسبقاً!', 'error');
+        loadAttendanceRegister(); // Refresh to remove from list
+        return;
+    }
+    
+    showLoad(true);
+    
+    try {
+        const {error} = await sb.from('attendance').insert({
+            worker_id: workerId,
+            date: date,
+            site_id: siteId || null,
+            status: status,
+            recorded_by: CUR_USER.id,
+            is_approved: false
+        });
+        
+        if(error) {
+            if(error.message.includes('unique') || error.code === '23505') {
+                showToast('هذا العامل مسجل حضوره مسبقاً!', 'error');
+            } else {
+                showToast('خطأ في التسجيل: ' + error.message, 'error');
+            }
+        } else {
+            showToast('تم تسجيل الحضور بنجاح');
+        }
+    } catch(err) {
+        showToast('خطأ في الاتصال', 'error');
+    }
+    
+    // Refresh list to remove registered worker
+    await loadAttendanceRegister();
+    showLoad(false);
+}
 
   async function loadAttendanceReview() {
       const date = document.getElementById('reviewDate').value;
