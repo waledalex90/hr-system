@@ -257,11 +257,28 @@
     .worker-card:hover { background: #f8f9fa; }
     .worker-card.selected { background: #e3f2fd; border-right: 4px solid var(--blue); }
 
-    /* Roles Table */
-    .roles-table { width: 100%; border-collapse: collapse; }
+    /* Roles Table - Interactive */
+    .roles-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
     .roles-table th, .roles-table td { padding: 15px; text-align: right; border-bottom: 1px solid var(--border-color); }
     .roles-table th { background: var(--bg-main); font-weight: bold; }
     .roles-table tr:hover { background: #f8f9fa; }
+    
+    .permission-toggle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 6px;
+        transition: 0.2s;
+    }
+    .permission-toggle:hover { background: var(--bg-main); }
+    .permission-toggle input[type="checkbox"] { 
+        width: 18px; 
+        height: 18px; 
+        margin: 0;
+        cursor: pointer;
+    }
 
     /* Progress bar for large exports */
     .progress-container { width: 100%; max-width: 400px; margin: 20px auto; }
@@ -318,7 +335,6 @@
 
 <div class="menu-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></div>
 
-<!-- Modals -->
 <div id="editWorkerModal" class="modal-overlay">
   <div class="modal-box">
     <h3>تعديل بيانات الموظف</h3>
@@ -408,7 +424,6 @@
   </div>
 </div>
 
-<!-- Bulk Attendance Modal -->
 <div id="bulkAttendanceModal" class="modal-overlay">
   <div class="modal-box">
     <h3>تسجيل حضور مجموعة</h3>
@@ -425,7 +440,6 @@
   </div>
 </div>
 
-<!-- Login -->
 <div id="loginScreen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-main); z-index:5000; display:flex; justify-content:center; align-items:center; flex-direction:column;">
     <div class="card" style="width:90%; max-width:400px; text-align:center; padding:40px;">
         <img src="https://abn.sa.com/wp-content/uploads/2022/01/logo-removebg-preview.png" width="100" style="margin-bottom:25px; filter: grayscale(100%) brightness(0);">
@@ -437,7 +451,6 @@
     </div>
 </div>
 
-<!-- Main App -->
 <div id="appLayout" class="hidden" style="display:flex; width:100%;">
   
   <div class="sidebar" id="sidebar">
@@ -471,7 +484,6 @@
         </div>
     </div>
 
-    <!-- DASHBOARD -->
     <div id="v-dashboard" class="view-section hidden">
         <div class="grid-4" style="margin-bottom:25px;">
             <div class="stat-card">
@@ -508,7 +520,6 @@
         </div>
     </div>
 
-    <!-- WORKERS -->
     <div id="v-workers" class="view-section hidden">
        <div class="sub-tabs">
           <div class="sub-tab active" onclick="switchTab('list')">قائمة الموظفين</div>
@@ -562,7 +573,6 @@
        </div>
     </div>
 
-    <!-- SITES -->
     <div id="v-sites" class="view-section hidden">
        <div class="card">
           <h3>إضافة موقع جديد</h3>
@@ -575,7 +585,6 @@
        <div id="sitesList" class="grid-3"></div>
     </div>
 
-    <!-- CONTRACTORS -->
     <div id="v-contractors" class="view-section hidden">
         <div class="card">
             <h3>إضافة مقاول جديد</h3>
@@ -587,7 +596,6 @@
         <div id="contsList" class="grid-3"></div>
     </div>
 
-    <!-- ATTENDANCE (Supervisor) - المعدلة -->
     <div id="v-attendance" class="view-section hidden">
        <div class="sub-tabs">
           <div class="sub-tab active" onclick="switchAttTab('register')">تسجيل الحضور</div>
@@ -600,7 +608,6 @@
               <div><label class="input-label-secondary">الموقع</label><select id="attSite" onchange="loadAttendanceRegister()"></select></div>
           </div>
           
-          <!-- Counter Bar -->
           <div class="counter-bar" id="attCounterBar">
               <div class="counter-item">
                   <div class="number" id="countTotal">0</div>
@@ -624,14 +631,13 @@
               </div>
           </div>
           
-          <!-- Bulk Actions -->
           <div class="flex-row" style="margin-bottom:15px; background:var(--bg-main); padding:15px; border-radius:8px;">
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:bold;">
                   <input type="checkbox" id="selectAllAtt" onchange="toggleSelectAllAtt()" class="custom-checkbox">
                   تحديد الكل (<span id="selectAllCount">0</span>)
               </label>
               <div class="flex-row" style="margin-right:auto;">
-                  <span id="selectedCount" style="color:var(--text-light);">تم اختيار 0</span>
+                  <span id="selectedCount" style="color:var(--text-light); font-weight:bold;">تم اختيار 0 من 0</span>
                   <button onclick="openBulkAttendance()" class="btn btn-sm btn-green" id="bulkActionBtn" disabled>
                       <i class="fa-solid fa-users"></i> تسجيل للمحددين
                   </button>
@@ -639,6 +645,7 @@
           </div>
           
           <div id="attendanceRegisterList"></div>
+          <div id="attendanceLoadMore"></div>
        </div>
        
        <div id="att-review-view" class="hidden card">
@@ -650,7 +657,6 @@
        </div>
     </div>
 
-    <!-- APPROVAL (Data Entry) -->
     <div id="v-approval" class="view-section hidden">
        <div class="sub-tabs">
           <div class="sub-tab active" onclick="switchAppTab('pending')">الحضور المعلق</div>
@@ -658,12 +664,34 @@
        </div>
        
        <div id="app-pending-view" class="card">
+          <div class="counter-bar" style="margin-bottom:20px;">
+              <div class="counter-item">
+                  <div class="number" id="appCountTotal">0</div>
+                  <div class="label">إجمالي السجلات</div>
+              </div>
+              <div class="counter-item">
+                  <div class="number" id="appCountSelected">0</div>
+                  <div class="label" style="color:var(--blue)">المحدد</div>
+              </div>
+              <div class="counter-item">
+                  <div class="number" id="appCountApproved">0</div>
+                  <div class="label" style="color:var(--green)">تم اعتماده</div>
+              </div>
+              <div class="counter-item">
+                  <div class="number" id="appCountRemaining">0</div>
+                  <div class="label" style="color:var(--orange)">متبقي</div>
+              </div>
+          </div>
+          
           <div class="grid-3" style="margin-bottom:20px;">
               <div><label class="input-label-secondary">التاريخ</label><input type="date" id="appDate" onchange="loadPendingApproval()"></div>
               <div><label class="input-label-secondary">الموقع</label><select id="appSite" onchange="loadPendingApproval()"></select></div>
           </div>
           <div class="flex-row" style="margin-bottom:15px;">
-              <label style="cursor:pointer; display:flex; align-items:center; gap:8px;"><input type="checkbox" id="selectAllPending" onchange="toggleSelectAll()" style="width:auto;"> اختيار الكل</label>
+              <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+                  <input type="checkbox" id="selectAllPending" onchange="toggleSelectAll()" style="width:auto;"> 
+                  <span id="selectAllPendingText">اختيار الكل</span>
+              </label>
               <div class="flex-row">
                   <button onclick="bulkApprove('approve')" class="btn btn-sm btn-green">اعتماد المحدد</button>
                   <button onclick="bulkApprove('reject')" class="btn btn-sm btn-red">رفض المحدد</button>
@@ -682,7 +710,6 @@
        </div>
     </div>
 
-    <!-- REPORTS -->
     <div id="v-reports" class="view-section hidden">
       <div class="card" style="max-width:800px; margin:0 auto;">
         <h3>استخراج التقارير</h3>
@@ -707,7 +734,6 @@
       </div>
     </div>
 
-    <!-- CORRECTIONS -->
     <div id="v-corrections" class="view-section hidden">
        <div class="card">
            <h3>طلبات تعديل الحضور المعلقة</h3>
@@ -715,7 +741,6 @@
        </div>
     </div>
 
-    <!-- USERS -->
     <div id="v-users" class="view-section hidden">
        <div class="card" style="max-width:800px; margin:0 auto;">
            <h3>إدارة المستخدمين</h3>
@@ -738,79 +763,27 @@
        <div id="usersList" style="max-width:800px; margin:25px auto 0 auto;"></div>
     </div>
     
-    <!-- ROLES - المعدلة -->
     <div id="v-roles" class="view-section hidden">
        <div class="card">
            <h3><i class="fa-solid fa-shield-halved"></i> الأدوار والصلاحيات</h3>
-           <p style="color:var(--text-light); margin-bottom:20px;">جدول يوضح صلاحيات كل دور في النظام</p>
+           <p style="color:var(--text-light); margin-bottom:20px;">اضغط على الصلاحيات لتفعيل/تعطيل كل دور (يتم الحفظ تلقائياً)</p>
            
            <div style="overflow-x:auto;">
-               <table class="roles-table">
+               <table class="roles-table" id="rolesTable">
                    <thead>
                        <tr>
                            <th>الدور</th>
                            <th>الوصف</th>
-                           <th>الصلاحيات الرئيسية</th>
-                           <th>الوصول للتقارير</th>
+                           <th>إدارة العمال</th>
+                           <th>إدارة المواقع</th>
+                           <th>تسجيل الحضور</th>
+                           <th>اعتماد الحضور</th>
+                           <th>التقارير</th>
+                           <th>إدارة المستخدمين</th>
                        </tr>
                    </thead>
-                   <tbody>
-                       <tr>
-                           <td><span class="badge bg-blue" style="font-size:1rem;"><i class="fa-solid fa-crown"></i> مدير النظام</span></td>
-                           <td>تحكم كامل في جميع مكونات النظام</td>
-                           <td>
-                               • إدارة العمال (إضافة/تعديل/حذف)<br>
-                               • إدارة المواقع والمقاولين<br>
-                               • إدارة المستخدمين والصلاحيات<br>
-                               • اعتماد/رفض طلبات التعديل<br>
-                               • تسجيل واعتماد الحضور
-                           </td>
-                           <td>جميع التقارير (4 تقارير)</td>
-                       </tr>
-                       <tr>
-                           <td><span class="badge bg-green" style="font-size:1rem;"><i class="fa-solid fa-user-tie"></i> موارد بشرية</span></td>
-                           <td>إدارة بيانات العمال والمواقع</td>
-                           <td>
-                               • إدارة العمال (إضافة/تعديل/حذف)<br>
-                               • إضافة مواقع جديدة<br>
-                               • عرض بيانات العمال<br>
-                               • عرض سجل الحضور
-                           </td>
-                           <td>تقرير الحضور + بيانات العمال فقط</td>
-                       </tr>
-                       <tr>
-                           <td><span class="badge bg-orange" style="font-size:1rem;"><i class="fa-solid fa-hard-hat"></i> مشرف موقع</span></td>
-                           <td>تسجيل حضور العمال في الموقع</td>
-                           <td>
-                               • تسجيل حضور العمال (حاضر/غائب/نصف يوم)<br>
-                               • مراجعة الحضور المسجل<br>
-                               • تصفية العمال بالموقع
-                           </td>
-                           <td>لا يوجد</td>
-                       </tr>
-                       <tr>
-                           <td><span class="badge bg-gray" style="font-size:1rem;"><i class="fa-solid fa-keyboard"></i> مدخل بيانات</span></td>
-                           <td>اعتماد الحضور المسجل</td>
-                           <td>
-                               • اعتماد الحضور المعلق<br>
-                               • رفض/حذف سجلات الحضور<br>
-                               • طلب تعديل الحضور المعتمد
-                           </td>
-                           <td>لا يوجد</td>
-                       </tr>
-                   </tbody>
+                   <tbody id="rolesTableBody"></tbody>
                </table>
-           </div>
-           
-           <div class="card" style="margin-top:20px; background:var(--bg-main);">
-               <h4 style="margin-top:0;"><i class="fa-solid fa-lightbulb"></i> ملاحظات هامة</h4>
-               <ul style="line-height:2; color:var(--text-dark);">
-                   <li>كل مستخدم يمكن ربطه بموقع واحد أو أكثر حسب طبيعة عمله</li>
-                   <li>المشرف يرى فقط عمال موقعه/مواقعه المخصصة</li>
-                   <li>مدخل البيانات يرى الحضور الخاص بمواقعه فقط</li>
-                   <li>مدير النظام هو الوحيد الذي يمكنه تعديل الحضور بعد اعتماده (عبر طلب التعديل)</li>
-                   <li>جميع العمليات يتم تسجيلها (من قام بالعمل ومتى)</li>
-               </ul>
            </div>
        </div>
     </div>
@@ -829,6 +802,20 @@
   const WORKERS_PER_PAGE = 100;
   let ALL_WORKERS_LOADED = false;
   let SELECTED_WORKERS = new Set();
+  
+  // Attendance pagination variables
+  let ATTENDANCE_PAGE = 0;
+  const ATTENDANCE_PER_PAGE = 50;
+  let ALL_PENDING_WORKERS = [];
+  let ALL_ATTENDANCE_LOADED = false;
+  
+  // Role permissions cache
+  let ROLE_PERMISSIONS = {
+      admin: { workers: true, sites: true, attendance: true, approval: true, reports: true, users: true },
+      hr: { workers: true, sites: true, attendance: false, approval: false, reports: true, users: false },
+      supervisor: { workers: false, sites: false, attendance: true, approval: false, reports: false, users: false },
+      data_entry: { workers: false, sites: false, attendance: false, approval: true, reports: false, users: false }
+  };
 
   // Toast
   function showToast(msg, type='success') {
@@ -855,9 +842,7 @@
 
   function closeModal(id) { document.getElementById(id).classList.remove('open'); }
   
-  function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('active');
-  }
+  function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
   
   function nav(v) {
       document.querySelectorAll('.view-section').forEach(e=>e.classList.add('hidden'));
@@ -873,6 +858,32 @@
       if(v === 'approval') { initApprovalFilters(); loadPendingApproval(); }
       if(v === 'corrections') loadCorrections();
       if(v === 'roles') loadRoles();
+  }
+
+  // --- HELPER FOR LARGE DATA FETCHING ---
+  async function fetchAllData(queryBuilder, maxRecords = 100000) {
+      let allData = [];
+      let from = 0;
+      const chunk = 1000;
+      
+      while(allData.length < maxRecords) {
+          // Must clone query for range to work properly in loop
+          // Using order by id to ensure stable pagination
+          const {data, error} = await queryBuilder.range(from, from + chunk - 1).order('id');
+          
+          if(error) {
+              console.error('Fetch error:', error);
+              break;
+          }
+          
+          if(!data || data.length === 0) break;
+          
+          allData.push(...data);
+          
+          if(data.length < chunk) break;
+          from += chunk;
+      }
+      return allData;
   }
 
   // Login
@@ -936,6 +947,7 @@
   async function loadData() {
       showLoad(true);
       await Promise.all([loadSites(), loadConts()]);
+      // Admin/HR see workers list by default
       if(CUR_USER.role === 'admin' || CUR_USER.role === 'hr') loadWorkersFull(true);
       if(CUR_USER.role === 'admin') loadUsers();
       showLoad(false);
@@ -945,23 +957,16 @@
   async function loadSites() {
       const {data} = await sb.from('sites').select('*, contractors(name)').order('name');
       SITES_CACHE = data || [];
-      
       const opts = '<option value="">اختر...</option>' + SITES_CACHE.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
       const allOpts = '<option value="">كل المواقع</option>' + SITES_CACHE.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-      
       ['newWSite','editWSite','nSiteCont','attSite','reviewSite','appSite','appApprovedSite','repSite'].forEach(id => {
           const el = document.getElementById(id);
           if(el) el.innerHTML = id.includes('filt') || id.includes('rep') || id.includes('app') || id.includes('review') || id.includes('att') ? allOpts : opts;
       });
-      
       const userSites = CUR_USER.role === 'admin' ? SITES_CACHE : SITES_CACHE.filter(s => CUR_USER.sites.includes(s.id));
-      
       document.getElementById('sitesList').innerHTML = userSites.map(s=>`
         <div class="card ${s.is_active===false?'inactive-card':''}" style="display:flex; justify-content:space-between; align-items:center; padding:15px;">
-            <div>
-                <b style="font-size:1.1rem;">${s.name}</b><br>
-                <small style="color:var(--text-light)">المقاول: ${s.contractors?.name||'-'}</small>
-            </div>
+            <div><b style="font-size:1.1rem;">${s.name}</b><br><small style="color:var(--text-light)">المقاول: ${s.contractors?.name||'-'}</small></div>
             <div class="flex-row">
                 <label class="toggle-switch" title="${s.is_active!==false?'إيقاف':'تفعيل'}">
                     <input type="checkbox" ${s.is_active!==false?'checked':''} onchange="toggleSiteActive(${s.id}, this.checked)">
@@ -1004,15 +1009,12 @@
   async function loadConts() {
       const {data} = await sb.from('contractors').select('*').order('name');
       CONTS_CACHE = data || [];
-      
       const opts = '<option value="">اختر...</option>' + CONTS_CACHE.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
       const allOpts = '<option value="">كل المقاولين</option>' + CONTS_CACHE.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-      
       ['newWCont','editWCont','repCont','filtCont','nSiteCont'].forEach(id => {
           const el = document.getElementById(id);
           if(el) el.innerHTML = id.includes('filt') || id.includes('rep') ? allOpts : opts;
       });
-      
       document.getElementById('contsList').innerHTML = CONTS_CACHE.map(c=>`
         <div class="card ${c.is_active===false?'inactive-card':''}" style="display:flex; justify-content:space-between; align-items:center; padding:15px;">
             <b>${c.name}</b>
@@ -1053,7 +1055,7 @@
       showLoad(false);
   }
 
-  // Workers with Pagination
+  // Workers
   function switchTab(t) {
       document.getElementById('hr-add-view').classList.toggle('hidden', t!='add');
       document.getElementById('hr-list-view').classList.toggle('hidden', t!='list');
@@ -1087,10 +1089,7 @@
       
       const {data, count, error} = await query;
       
-      if(error) {
-          showToast('خطأ في التحميل', 'error');
-          return;
-      }
+      if(error) { showToast('خطأ في التحميل', 'error'); return; }
       
       if(data && data.length > 0) {
           ALL_WORKERS = [...ALL_WORKERS, ...data];
@@ -1135,24 +1134,16 @@
           return matchName && matchSite && matchCont && matchActive;
       });
       
-      if(q && res.length < 10 && !ALL_WORKERS_LOADED) {
-          loadWorkersFull(false);
-      }
+      if(q && res.length < 10 && !ALL_WORKERS_LOADED) loadWorkersFull(false);
       
       document.getElementById('workersList').innerHTML = res.map(w => `
       <div class="card ${w.is_active===false?'inactive-card':''}" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:15px;">
           <div style="display:flex; align-items:center; gap:15px;">
-              <div style="width:50px; height:50px; background:#eee; border-radius:50%; display:flex; justify-content:center; align-items:center; font-weight:bold; color:#777; font-size:1.2rem;">
-                  ${w.name.charAt(0)}
-              </div>
+              <div style="width:50px; height:50px; background:#eee; border-radius:50%; display:flex; justify-content:center; align-items:center; font-weight:bold; color:#777; font-size:1.2rem;">${w.name.charAt(0)}</div>
               <div>
                   <b style="font-size:1.1rem;">${w.name}</b>
                   ${w.is_active===false?'<span class="badge bg-gray" style="margin-right:5px;">موقوف</span>':''}
-                  <br>
-                  <small style="color:var(--text-light);">
-                      <i class="fa-solid fa-id-card"></i> ${w.id_number} | 
-                      <i class="fa-solid fa-map-pin"></i> ${w.sites?.name||'غير محدد'}
-                  </small>
+                  <br><small style="color:var(--text-light);"><i class="fa-solid fa-id-card"></i> ${w.id_number} | <i class="fa-solid fa-map-pin"></i> ${w.sites?.name||'غير محدد'}</small>
               </div>
           </div>
           <div class="flex-row">
@@ -1215,13 +1206,11 @@
       document.getElementById('editWSuper').value=w.assigned_supervisor_id||'';
       document.getElementById('editWType').value=w.payment_type;
       document.getElementById('editWAmt').value=w.basic_salary;
-      
       const chk = document.getElementById('editWActive');
       const txt = document.getElementById('activeStatusText');
       chk.checked = (w.is_active !== false);
       txt.innerText = chk.checked ? 'نشط' : 'موقوف';
       txt.className = chk.checked ? 'badge bg-green' : 'badge bg-gray';
-      
       document.getElementById('editWorkerModal').classList.add('open');
   }
 
@@ -1253,13 +1242,10 @@
       showToast('تم حذف الموظف');
   }
 
-  // Excel
+  // Excel Upload
   function downloadTemplate() {
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([
-        ["الاسم الرباعي","رقم الهوية","المسمى الوظيفي","الراتب الأساسي","نوع الدفع (راتب/يومية)","اسم الموقع","اسم المشرف","اسم المقاول"],
-        ["محمد أحمد علي","1010101010","عامل","2500","راتب","موقع الرياض 1","أحمد محمد","شركة السعد"]
-    ]);
+    const ws = XLSX.utils.aoa_to_sheet([["الاسم الرباعي","رقم الهوية","المسمى الوظيفي","الراتب الأساسي","نوع الدفع (راتب/يومية)","اسم الموقع","اسم المشرف","اسم المقاول"]]);
     XLSX.utils.book_append_sheet(wb, ws, "نموذج البيانات");
     XLSX.writeFile(wb, "نموذج_استيراد_العمال.xlsx");
   }
@@ -1276,56 +1262,37 @@
               const data = new Uint8Array(e.target.result);
               const wb = XLSX.read(data, {type:'array'});
               const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
-              
               let count=0, errors=[];
-              
               for(let i=1; i<rows.length; i++) {
                   if(!rows[i][0] || !rows[i][1]) continue;
-                  
                   const site = SITES_CACHE.find(s => s.name === rows[i][5]);
                   const cont = CONTS_CACHE.find(c => c.name === rows[i][7]);
                   const {data:supervisor} = await sb.from('app_users').select('id').eq('full_name',rows[i][6]).eq('role','supervisor').single();
-                  
                   const {data:existing} = await sb.from('workers').select('id').eq('id_number',String(rows[i][1])).single();
-                  if(existing) {
-                      errors.push(`الصف ${i+1}: ${rows[i][1]} مسجل`);
-                      continue;
-                  }
-                  
+                  if(existing) { errors.push(`الصف ${i+1}: ${rows[i][1]} مسجل`); continue; }
                   await sb.from('workers').insert({
-                      name: rows[i][0],
-                      id_number: String(rows[i][1]),
-                      job_title: rows[i][2],
-                      basic_salary: rows[i][3],
+                      name: rows[i][0], id_number: String(rows[i][1]), job_title: rows[i][2], basic_salary: rows[i][3],
                       payment_type: rows[i][4] === 'يومية' ? 'daily' : 'salary',
-                      current_site_id: site?.id || null,
-                      assigned_supervisor_id: supervisor?.id || null,
-                      contractor_id: cont?.id || null,
-                      is_active: true
+                      current_site_id: site?.id || null, assigned_supervisor_id: supervisor?.id || null, contractor_id: cont?.id || null, is_active: true
                   });
                   count++;
               }
-              
               if(errors.length > 0) showToast(`تم استيراد ${count} موظف. أخطاء: ${errors.length}`, 'warning');
               else showToast(`تم استيراد ${count} موظف بنجاح!`);
-              
               loadWorkersFull(true);
               switchTab('list');
-          } catch(err) {
-              showToast('حدث خطأ في قراءة الملف', 'error');
-          }
+          } catch(err) { showToast('حدث خطأ في قراءة الملف', 'error'); }
           showLoad(false);
           input.value='';
       };
       reader.readAsArrayBuffer(file);
   }
 
-  // Attendance (Supervisor) - المعدل بالكامل
+  // Attendance
   function initAttendanceFilters() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('attDate').value = today;
       document.getElementById('reviewDate').value = today;
-      
       const userSites = CUR_USER.role === 'admin' ? SITES_CACHE : SITES_CACHE.filter(s => CUR_USER.sites.includes(s.id));
       const opts = '<option value="">كل المواقع</option>' + userSites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
       document.getElementById('attSite').innerHTML = opts;
@@ -1341,16 +1308,21 @@
   }
 
   async function loadAttendanceRegister() {
-      const date = document.getElementById('attDate').value;
+      const dateValue = document.getElementById('attDate').value;
+      const date = dateValue.split('/').reverse().join('-');
       const siteId = document.getElementById('attSite').value;
-      
       if(!date) return;
       
       showLoad(true);
       SELECTED_WORKERS.clear();
       updateSelectedCount();
       
-      // Get all workers (with pagination if needed)
+      // Reset pagination
+      ATTENDANCE_PAGE = 0;
+      ALL_PENDING_WORKERS = [];
+      ALL_ATTENDANCE_LOADED = false;
+      
+      // FIXED: Use loop to fetch ALL workers without limit
       let allWorkers = [];
       let from = 0;
       const chunk = 1000;
@@ -1367,15 +1339,22 @@
           from += chunk;
       }
       
-      // Get existing attendance
-      let attQuery = sb.from('attendance').select('*').eq('date',date);
-      const {data:existingAtt} = await attQuery;
+      // FIXED: Use loop to fetch ALL existing attendance without limit
+      let existingAtt = [];
+      let attFrom = 0;
+      while(true) {
+          let attQuery = sb.from('attendance').select('*').eq('date',date).range(attFrom, attFrom + chunk - 1);
+          const {data} = await attQuery;
+          if(!data || data.length === 0) break;
+          existingAtt.push(...data);
+          if(data.length < chunk) break;
+          attFrom += chunk;
+      }
       
-      // Calculate stats
-      const existingIds = existingAtt ? existingAtt.map(a => a.worker_id) : [];
-      const present = existingAtt ? existingAtt.filter(a => a.status === 'present').length : 0;
-      const absent = existingAtt ? existingAtt.filter(a => a.status === 'absent').length : 0;
-      const half = existingAtt ? existingAtt.filter(a => a.status === 'half').length : 0;
+      const existingIds = existingAtt.map(a => a.worker_id);
+      const present = existingAtt.filter(a => a.status === 'present').length;
+      const absent = existingAtt.filter(a => a.status === 'absent').length;
+      const half = existingAtt.filter(a => a.status === 'half').length;
       
       document.getElementById('countTotal').innerText = allWorkers.length;
       document.getElementById('countPending').innerText = allWorkers.length - existingIds.length;
@@ -1384,62 +1363,102 @@
       document.getElementById('countHalf').innerText = half;
       document.getElementById('selectAllCount').innerText = allWorkers.length - existingIds.length;
       
-      const pendingWorkers = allWorkers.filter(w => !existingIds.includes(w.id));
+      ALL_PENDING_WORKERS = allWorkers.filter(w => !existingIds.includes(w.id));
       
-      document.getElementById('attendanceRegisterList').innerHTML = pendingWorkers.map(w => `
+      renderAttendancePage();
+      showLoad(false);
+  }
+
+  function renderAttendancePage() {
+      const start = ATTENDANCE_PAGE * ATTENDANCE_PER_PAGE;
+      const end = start + ATTENDANCE_PER_PAGE;
+      const pageWorkers = ALL_PENDING_WORKERS.slice(start, end);
+      
+      const html = pageWorkers.map(w => `
       <div class="card worker-card" id="worker-${w.id}" style="margin-bottom:10px;">
           <input type="checkbox" class="custom-checkbox" value="${w.id}" onchange="toggleWorkerSelection(${w.id})">
           <div style="flex:1;">
-              <b>${w.name}</b><br>
-              <small style="color:var(--text-light);">${w.id_number}</small>
+              <b>${w.name}</b><br><small style="color:var(--text-light);">${w.id_number}</small>
           </div>
           <div class="flex-row">
               <button onclick="registerAttendance(${w.id},'present')" class="attendance-btn att-present">حاضر</button>
               <button onclick="registerAttendance(${w.id},'absent')" class="attendance-btn att-absent">غائب</button>
               <button onclick="registerAttendance(${w.id},'half')" class="attendance-btn att-half">نصف يوم</button>
           </div>
-      </div>`).join('') || '<div class="card" style="text-align:center; padding:40px; color:var(--text-light);"><i class="fa-solid fa-check-circle fa-3x" style="color:var(--green); margin-bottom:15px;"></i><br>تم تسجيل حضور جميع العمال لهذا اليوم</div>';
+      </div>`).join('');
       
-      showLoad(false);
+      if(ATTENDANCE_PAGE === 0) {
+          document.getElementById('attendanceRegisterList').innerHTML = html || 
+              '<div class="card" style="text-align:center; padding:40px; color:var(--text-light);"><i class="fa-solid fa-check-circle fa-3x" style="color:var(--green); margin-bottom:15px;"></i><br>تم تسجيل حضور جميع العمال لهذا اليوم</div>';
+      } else {
+          document.getElementById('attendanceRegisterList').insertAdjacentHTML('beforeend', html);
+      }
+      
+      if(end < ALL_PENDING_WORKERS.length) {
+          document.getElementById('attendanceLoadMore').innerHTML = `
+              <button onclick="loadMoreAttendance()" class="btn btn-outline" style="margin-top:20px; width:100%;">
+                  تحميل المزيد (${ALL_PENDING_WORKERS.length - end} متبقي)
+              </button>`;
+      } else {
+          document.getElementById('attendanceLoadMore').innerHTML = '';
+          ALL_ATTENDANCE_LOADED = true;
+      }
+      
+      pageWorkers.forEach(w => {
+          if(SELECTED_WORKERS.has(w.id)) {
+              const checkbox = document.querySelector(`#worker-${w.id} input[type="checkbox"]`);
+              const card = document.getElementById(`worker-${w.id}`);
+              if(checkbox) checkbox.checked = true;
+              if(card) card.classList.add('selected');
+          }
+      });
   }
+
+  function loadMoreAttendance() { ATTENDANCE_PAGE++; renderAttendancePage(); }
 
   function toggleWorkerSelection(id) {
       const checkbox = document.querySelector(`#worker-${id} input[type="checkbox"]`);
       const card = document.getElementById(`worker-${id}`);
-      
       if(checkbox.checked) {
           SELECTED_WORKERS.add(id);
           card.classList.add('selected');
       } else {
           SELECTED_WORKERS.delete(id);
           card.classList.remove('selected');
+          document.getElementById('selectAllAtt').checked = false;
       }
       updateSelectedCount();
   }
 
-  function toggleSelectAllAtt() {
+  async function toggleSelectAllAtt() {
       const checked = document.getElementById('selectAllAtt').checked;
-      const checkboxes = document.querySelectorAll('#attendanceRegisterList input[type="checkbox"]');
-      
-      checkboxes.forEach(cb => {
-          cb.checked = checked;
-          const id = parseInt(cb.value);
-          const card = document.getElementById(`worker-${id}`);
-          if(checked) {
-              SELECTED_WORKERS.add(id);
-              card?.classList.add('selected');
-          } else {
-              SELECTED_WORKERS.delete(id);
+      if(checked) {
+          ALL_PENDING_WORKERS.forEach(w => SELECTED_WORKERS.add(w.id));
+          // Only rendering if page is loaded
+          document.querySelectorAll('#attendanceRegisterList input[type="checkbox"]').forEach(cb => {
+             cb.checked = true;
+             const id = parseInt(cb.value);
+             const card = document.getElementById(`worker-${id}`);
+             card?.classList.add('selected');
+          });
+      } else {
+          SELECTED_WORKERS.clear();
+          document.querySelectorAll('#attendanceRegisterList input[type="checkbox"]').forEach(cb => {
+              cb.checked = false;
+              const id = parseInt(cb.value);
+              const card = document.getElementById(`worker-${id}`);
               card?.classList.remove('selected');
-          }
-      });
+          });
+      }
       updateSelectedCount();
   }
 
   function updateSelectedCount() {
       const count = SELECTED_WORKERS.size;
-      document.getElementById('selectedCount').innerText = `تم اختيار ${count}`;
+      const total = ALL_PENDING_WORKERS.length;
+      document.getElementById('selectedCount').innerText = `تم اختيار ${count} من ${total}`;
       document.getElementById('bulkActionBtn').disabled = count === 0;
+      document.getElementById('selectAllAtt').checked = count === total && total > 0;
   }
 
   function openBulkAttendance() {
@@ -1457,80 +1476,50 @@
       showLoad(true, `جاري تسجيل ${workers.length} موظف...`);
       
       let success = 0, failed = 0;
-      
-      for(let i=0; i<workers.length; i++) {
+      const batchSize = 100;
+      for(let i = 0; i < workers.length; i += batchSize) {
+          const batch = workers.slice(i, i + batchSize);
           showProgress(Math.round((i / workers.length) * 100), `جاري التسجيل... ${i+1} من ${workers.length}`);
           
-          try {
-              await sb.from('attendance').insert({
-                  worker_id: workers[i],
-                  date: date,
-                  site_id: siteId || null,
-                  status: status,
-                  recorded_by: CUR_USER.id,
-                  is_approved: false
-              });
-              success++;
-          } catch(e) {
-              failed++;
-          }
+          const payload = batch.map(wid => ({
+               worker_id: wid,
+               date: date,
+               site_id: siteId || null,
+               status: status,
+               recorded_by: CUR_USER.id,
+               is_approved: false
+          }));
+
+          const { error } = await sb.from('attendance').insert(payload);
+          if(!error) success += batch.length;
+          else failed += batch.length;
+          
+          if(i + batchSize < workers.length) await new Promise(r => setTimeout(r, 50));
       }
       
       showLoad(false);
       document.getElementById('progressContainer').classList.add('hidden');
       showToast(`تم تسجيل ${success} موظف${failed > 0 ? `، فشل ${failed}` : ''}`);
-      loadAttendanceRegister();
+      SELECTED_WORKERS.clear();
+      await loadAttendanceRegister();
   }
 
   async function registerAttendance(workerId, status) {
       const date = document.getElementById('attDate').value;
       const siteId = document.getElementById('attSite').value;
-      
-      // Check duplicate
-      const {data:existing} = await sb.from('attendance')
-          .select('id')
-          .eq('worker_id',workerId)
-          .eq('date',date)
-          .single();
-      
-      if(existing) {
-          showToast('هذا العامل مسجل حضوره مسبقاً!', 'error');
-          loadAttendanceRegister();
-          return;
-      }
+      const {data:existing} = await sb.from('attendance').select('id').eq('worker_id',workerId).eq('date',date).single();
+      if(existing) { showToast('هذا العامل مسجل حضوره مسبقاً!', 'error'); loadAttendanceRegister(); return; }
       
       showLoad(true);
-      
-      try {
-          const {error} = await sb.from('attendance').insert({
-              worker_id: workerId,
-              date: date,
-              site_id: siteId || null,
-              status: status,
-              recorded_by: CUR_USER.id,
-              is_approved: false
-          });
-          
-          if(error) {
-              if(error.message.includes('unique') || error.code === '23505') {
-                  showToast('هذا العامل مسجل حضوره مسبقاً!', 'error');
-              } else {
-                  showToast('خطأ في التسجيل', 'error');
-              }
-          } else {
-              showToast('تم تسجيل الحضور بنجاح');
-              // Remove from list visually
-              const card = document.getElementById(`worker-${workerId}`);
-              if(card) {
-                  card.style.opacity = '0';
-                  card.style.transform = 'translateX(100%)';
-                  setTimeout(() => card.remove(), 300);
-              }
-          }
-      } catch(err) {
-          showToast('خطأ في الاتصال', 'error');
+      const {error} = await sb.from('attendance').insert({
+          worker_id: workerId, date: date, site_id: siteId || null, status: status, recorded_by: CUR_USER.id, is_approved: false
+      });
+      if(error) showToast('خطأ في التسجيل', 'error');
+      else {
+          showToast('تم تسجيل الحضور بنجاح');
+          const card = document.getElementById(`worker-${workerId}`);
+          if(card) { card.style.opacity = '0'; card.style.transform = 'translateX(100%)'; setTimeout(() => card.remove(), 300); }
       }
-      
       setTimeout(() => loadAttendanceRegister(), 500);
       showLoad(false);
   }
@@ -1542,26 +1531,20 @@
       let query = sb.from('attendance').select('*, workers(name,id_number)').eq('date',date);
       if(siteId) query = query.eq('site_id',siteId);
       
-      const {data} = await query;
+      const allData = await fetchAllData(query);
       
-      document.getElementById('attendanceReviewList').innerHTML = (data||[]).map(a => `
+      document.getElementById('attendanceReviewList').innerHTML = allData.map(a => `
       <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:15px;">
-          <div>
-              <b>${a.workers?.name}</b><br>
-              <small style="color:var(--text-light);">${a.workers?.id_number}</small>
-          </div>
-          <span class="badge ${a.status==='present'?'bg-green':a.status==='absent'?'bg-red':'bg-orange'}">
-              ${a.status==='present'?'حاضر':a.status==='absent'?'غائب':'نصف يوم'}
-          </span>
+          <div><b>${a.workers?.name}</b><br><small style="color:var(--text-light);">${a.workers?.id_number}</small></div>
+          <span class="badge ${a.status==='present'?'bg-green':a.status==='absent'?'bg-red':'bg-orange'}">${a.status==='present'?'حاضر':a.status==='absent'?'غائب':'نصف يوم'}</span>
       </div>`).join('') || '<p style="text-align:center; color:var(--text-light);">لا يوجد سجلات</p>';
   }
 
-  // Approval (Data Entry)
+  // Approval
   function initApprovalFilters() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('appDate').value = today;
       document.getElementById('appApprovedDate').value = today;
-      
       const userSites = CUR_USER.role === 'admin' ? SITES_CACHE : SITES_CACHE.filter(s => CUR_USER.sites.includes(s.id));
       const opts = '<option value="">كل المواقع</option>' + userSites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
       document.getElementById('appSite').innerHTML = opts;
@@ -1580,35 +1563,84 @@
       const date = document.getElementById('appDate').value;
       const siteId = document.getElementById('appSite').value;
       
+      showLoad(true);
       let query = sb.from('attendance').select('*, workers(name,id_number), recorders:recorded_by(full_name)').eq('is_approved',false);
       if(date) query = query.eq('date',date);
       if(siteId) query = query.eq('site_id',siteId);
       
-      const {data} = await query;
+      // FIXED: Use fetchAllData to ensure ALL pending records are loaded
+      const attendanceData = await fetchAllData(query);
       
-      document.getElementById('pendingApprovalList').innerHTML = (data||[]).map(a => `
+      const totalCount = attendanceData.length;
+      document.getElementById('appCountTotal').innerText = totalCount;
+      document.getElementById('appCountSelected').innerText = '0';
+      document.getElementById('appCountRemaining').innerText = totalCount;
+      
+      document.getElementById('pendingApprovalList').innerHTML = attendanceData.map(a => `
       <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:15px;">
           <div style="display:flex; align-items:center; gap:10px;">
-              <input type="checkbox" class="pending-checkbox" value="${a.id}" style="width:auto;">
-              <div>
-                  <b>${a.workers?.name}</b><br>
-                  <small style="color:var(--text-light);">${a.workers?.id_number} | ${a.date} | مسجل: ${a.recorders?.full_name}</small>
-              </div>
+              <input type="checkbox" class="pending-checkbox custom-checkbox" value="${a.id}" onchange="updateApprovalCounters()" style="width:auto;">
+              <div><b>${a.workers?.name}</b><br><small style="color:var(--text-light);">${a.workers?.id_number} | ${a.date} | مسجل: ${a.recorders?.full_name}</small></div>
           </div>
           <div class="flex-row">
-              <span class="badge ${a.status==='present'?'bg-green':a.status==='absent'?'bg-red':'bg-orange'}">
-                  ${a.status==='present'?'حاضر':a.status==='absent'?'غائب':'نصف يوم'}
-              </span>
+              <span class="badge ${a.status==='present'?'bg-green':a.status==='absent'?'bg-red':'bg-orange'}">${a.status==='present'?'حاضر':a.status==='absent'?'غائب':'نصف يوم'}</span>
               <button onclick="approveAttendance(${a.id}, true)" class="btn-sm btn-green">اعتماد</button>
               <button onclick="approveAttendance(${a.id}, false)" class="btn-sm btn-red">رفض</button>
           </div>
       </div>`).join('') || '<p style="text-align:center; color:var(--text-light);">لا يوجد سجلات معلقة</p>';
+      
+      document.getElementById('selectAllPending').checked = false;
+      document.getElementById('selectAllPendingText').innerText = 'اختيار الكل';
+      showLoad(false);
+  }
+
+  function updateApprovalCounters() {
+      const selected = document.querySelectorAll('.pending-checkbox:checked').length;
+      const total = document.querySelectorAll('.pending-checkbox').length;
+      document.getElementById('appCountSelected').innerText = selected;
+      document.getElementById('appCountRemaining').innerText = total - selected;
+      document.getElementById('selectAllPending').checked = selected === total && total > 0;
+      document.getElementById('selectAllPendingText').innerText = selected === total && total > 0 ? `اختيار الكل (${selected})` : 'اختيار الكل';
+  }
+
+  function toggleSelectAll() {
+      const checkboxes = document.querySelectorAll('.pending-checkbox');
+      const isChecked = document.getElementById('selectAllPending').checked;
+      checkboxes.forEach(cb => cb.checked = isChecked);
+      updateApprovalCounters();
+  }
+
+  async function bulkApprove(action) {
+      const selected = Array.from(document.querySelectorAll('.pending-checkbox:checked')).map(cb => cb.value);
+      if(selected.length === 0) return showToast('يرجى اختيار سجل واحد على الأقل', 'warning');
+      if(!confirm(`هل أنت متأكد من ${action === 'approve' ? 'اعتماد' : action === 'reject' ? 'رفض' : 'حذف'} ${selected.length} سجل؟`)) return;
+      
+      showLoad(true, `جاري ${action === 'approve' ? 'الاعتماد' : action === 'reject' ? 'الرفض' : 'الحذف'}...`);
+      let success = 0;
+      const batchSize = 100;
+      for(let i = 0; i < selected.length; i += batchSize) {
+          const batch = selected.slice(i, i + batchSize);
+          showProgress(Math.round((i / selected.length) * 100), `جاري المعالجة... ${i+1} من ${selected.length}`);
+          try {
+              if(action === 'approve') {
+                  const {error} = await sb.from('attendance').update({is_approved: true, approved_by: CUR_USER.id, approved_at: new Date().toISOString()}).in('id', batch);
+                  if(!error) success += batch.length;
+              } else if(action === 'reject' || action === 'delete') {
+                  const {error} = await sb.from('attendance').delete().in('id', batch);
+                  if(!error) success += batch.length;
+              }
+          } catch(e) {}
+      }
+      showLoad(false);
+      document.getElementById('progressContainer').classList.add('hidden');
+      showToast(`تم ${action === 'approve' ? 'اعتماد' : action === 'reject' ? 'رفض' : 'حذف'} ${success} من ${selected.length} سجل`);
+      loadPendingApproval();
   }
 
   async function approveAttendance(id, approve) {
       showLoad(true);
       if(approve) {
-          await sb.from('attendance').update({is_approved:true, approved_by:CUR_USER.id, approved_at:new Date()}).eq('id',id);
+          await sb.from('attendance').update({is_approved:true, approved_by:CUR_USER.id, approved_at:new Date().toISOString()}).eq('id',id);
           showToast('تم اعتماد الحضور');
       } else {
           await sb.from('attendance').delete().eq('id',id);
@@ -1621,23 +1653,20 @@
   async function loadApprovedAttendance() {
       const date = document.getElementById('appApprovedDate').value;
       const siteId = document.getElementById('appApprovedSite').value;
-      
       let query = sb.from('attendance').select('*, workers(name,id_number), approvers:approved_by(full_name)').eq('is_approved',true);
       if(date) query = query.eq('date',date);
       if(siteId) query = query.eq('site_id',siteId);
       
-      const {data} = await query;
+      // FIXED: Use fetchAllData here too
+      const data = await fetchAllData(query);
       
       document.getElementById('approvedAttendanceList').innerHTML = (data||[]).map(a => `
       <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:15px;">
           <div>
-              <b>${a.workers?.name}</b><br>
-              <small style="color:var(--text-light);">${a.workers?.id_number} | ${a.date} | معتمد: ${a.approvers?.full_name}</small>
+              <b>${a.workers?.name}</b><br><small style="color:var(--text-light);">${a.workers?.id_number} | ${a.date} | معتمد: ${a.approvers?.full_name}</small>
           </div>
           <div class="flex-row">
-              <span class="badge ${a.status==='present'?'bg-green':a.status==='absent'?'bg-red':'bg-orange'}">
-                  ${a.status==='present'?'حاضر':a.status==='absent'?'غائب':'نصف يوم'}
-              </span>
+              <span class="badge ${a.status==='present'?'bg-green':a.status==='absent'?'bg-red':'bg-orange'}">${a.status==='present'?'حاضر':a.status==='absent'?'غائب':'نصف يوم'}</span>
               <button onclick="requestCorrection(${a.id})" class="btn-sm btn-outline">طلب تعديل</button>
           </div>
       </div>`).join('') || '<p style="text-align:center; color:var(--text-light);">لا يوجد سجلات معتمدة</p>';
@@ -1646,14 +1675,8 @@
   async function requestCorrection(attId) {
       const reason = prompt('سبب طلب التعديل:');
       if(!reason) return;
-      
       showLoad(true);
-      await sb.from('correction_requests').insert({
-          attendance_id: attId,
-          requester_id: CUR_USER.id,
-          reason: reason,
-          status: 'pending'
-      });
+      await sb.from('correction_requests').insert({attendance_id: attId, requester_id: CUR_USER.id, reason: reason, status: 'pending'});
       showLoad(false);
       showToast('تم إرسال طلب التعديل');
   }
@@ -1661,14 +1684,10 @@
   // Corrections
   async function loadCorrections() {
       const {data} = await sb.from('correction_requests').select('*, attendance(*, workers(name,id_number)), requesters:requester_id(full_name)').eq('status','pending');
-      
       document.getElementById('correctionsList').innerHTML = (data||[]).map(c => `
       <div class="card" style="margin-bottom:10px; padding:15px;">
           <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
-              <div>
-                  <b>طلب من: ${c.requesters?.full_name}</b><br>
-                  <small style="color:var(--text-light);">${new Date(c.created_at).toLocaleString('ar-SA')}</small>
-              </div>
+              <div><b>طلب من: ${c.requesters?.full_name}</b><br><small style="color:var(--text-light);">${new Date(c.created_at).toLocaleString('ar-SA')}</small></div>
               <span class="badge bg-orange">معلق</span>
           </div>
           <div style="background:var(--bg-main); padding:10px; border-radius:8px; margin-bottom:10px;">
@@ -1686,12 +1705,10 @@
 
   async function approveCorrection(reqId, attId) {
       const {data:att} = await sb.from('attendance').select('*, workers(name)').eq('id',attId).single();
-      
       document.getElementById('editAttId').value = att.id;
       document.getElementById('editAttWorker').value = att.workers?.name;
       document.getElementById('editAttDate').value = att.date;
       document.getElementById('editAttStatus').value = att.status;
-      
       document.getElementById('editAttendanceModal').classList.add('open');
       await sb.from('correction_requests').update({status:'approved'}).eq('id',reqId);
   }
@@ -1707,7 +1724,6 @@
   async function saveAttendanceEdit() {
       const id = document.getElementById('editAttId').value;
       const status = document.getElementById('editAttStatus').value;
-      
       showLoad(true);
       await sb.from('attendance').update({status:status}).eq('id',id);
       closeModal('editAttendanceModal');
@@ -1716,7 +1732,7 @@
       showToast('تم تعديل الحضور');
   }
 
-  // Reports - مع دعم 120 ألف سجل
+  // Reports
   function updateReportOptions() {
       const type = document.getElementById('repType').value;
       document.getElementById('repDateRange').style.display = type === 'workers' ? 'none' : 'flex';
@@ -1729,110 +1745,50 @@
       const siteId = document.getElementById('repSite').value;
       const contId = document.getElementById('repCont').value;
       
-      if(type !== 'workers' && (!start || !end)) {
-          return showToast('يرجى اختيار نطاق التاريخ', 'error');
-      }
+      if(type !== 'workers' && (!start || !end)) return showToast('يرجى اختيار نطاق التاريخ', 'error');
       
       showLoad(true, 'جاري إعداد التقرير... قد يستغرق بعض الوقت');
-      
       try {
-          if(type === 'workers') {
-              await exportWorkersReport(siteId, contId);
-          } else if(type === 'attendance_log') {
-              await exportAttendanceReport(start, end, siteId);
-          } else if(type === 'payroll') {
-              await exportPayrollReport(start, end, siteId, contId);
-          } else if(type === 'contractor_invoice') {
-              await exportContractorReport(start, end, siteId, contId);
-          }
-      } catch(err) {
-          console.error(err);
-          showToast('حدث خطأ أثناء إعداد التقرير', 'error');
-      }
-      
+          if(type === 'workers') await exportWorkersReport(siteId, contId);
+          else if(type === 'attendance_log') await exportAttendanceReport(start, end, siteId);
+          else if(type === 'payroll') await exportPayrollReport(start, end, siteId, contId);
+          else if(type === 'contractor_invoice') await exportContractorReport(start, end, siteId, contId);
+      } catch(err) { console.error(err); showToast('حدث خطأ أثناء إعداد التقرير', 'error'); }
       showLoad(false);
       document.getElementById('progressContainer').classList.add('hidden');
   }
 
+  // FIXED REPORT FUNCTIONS
   async function exportWorkersReport(siteId, contId) {
-      let allData = [];
-      let from = 0;
-      const chunk = 1000;
+      let query = sb.from('workers').select('*, sites(name), contractors(name)').eq('is_active',true);
+      if(siteId) query = query.eq('current_site_id',siteId);
+      if(contId) query = query.eq('contractor_id',contId);
       
-      while(true) {
-          showProgress(Math.round((from / (from + 1000)) * 50), `جاري تحميل البيانات... ${allData.length}`);
-          
-          let query = sb.from('workers').select('*, sites(name), contractors(name)').eq('is_active',true);
-          if(siteId) query = query.eq('current_site_id',siteId);
-          if(contId) query = query.eq('contractor_id',contId);
-          
-          const {data} = await query.range(from, from + chunk - 1);
-          if(!data || data.length === 0) break;
-          allData.push(...data);
-          if(data.length < chunk) break;
-          from += chunk;
-      }
-      
+      const allData = await fetchAllData(query);
       const headers = ['الاسم','رقم الهوية','المسمى','الراتب','نوع الدفع','الموقع','المقاول'];
-      const rows = allData.map(w => [
-          w.name, w.id_number, w.job_title || '', w.basic_salary || '',
-          w.payment_type === 'daily' ? 'يومية' : 'راتب',
-          w.sites?.name || '', w.contractors?.name || ''
-      ]);
-      
+      const rows = allData.map(w => [w.name, w.id_number, w.job_title || '', w.basic_salary || '', w.payment_type === 'daily' ? 'يومية' : 'راتب', w.sites?.name || 'غير محدد', w.contractors?.name || '']);
       exportToExcel([headers, ...rows], 'بيانات_العمال.xlsx');
       showToast(`تم تصدير ${allData.length} عامل`, 'success');
   }
 
   async function exportAttendanceReport(start, end, siteId) {
-      let allData = [];
-      let from = 0;
-      const chunk = 5000;
-      
-      while(true) {
-          showProgress(Math.round((from / (from + 5000)) * 50), `جاري تحميل الحضور... ${allData.length}`);
-          
-          let query = sb.from('attendance').select('*, workers(name,id_number), sites(name)')
-              .gte('date',start).lte('date',end).eq('is_approved',true);
-          if(siteId) query = query.eq('site_id',siteId);
-          
-          const {data} = await query.range(from, from + chunk - 1);
-          if(!data || data.length === 0) break;
-          allData.push(...data);
-          if(data.length < chunk) break;
-          from += chunk;
-      }
-      
+      let query = sb.from('attendance').select('*, workers!inner(name,id_number), sites(name)').gte('date',start).lte('date',end).eq('is_approved',true);
+      if(siteId) query = query.eq('site_id',siteId);
+      const allData = await fetchAllData(query);
       const headers = ['التاريخ','رقم الهوية','الاسم','الموقع','الحالة'];
-      const rows = allData.map(a => [
-          a.date, a.workers?.id_number, a.workers?.name, 
-          a.sites?.name, a.status==='present'?'حاضر':a.status==='absent'?'غائب':'نصف يوم'
-      ]);
-      
+      const rows = allData.map(a => [a.date, a.workers?.id_number, a.workers?.name, a.sites?.name || 'غير محدد', a.status==='present'?'حاضر':a.status==='absent'?'غائب':'نصف يوم']);
       exportToExcel([headers, ...rows], 'سجل_الحضور.xlsx');
       showToast(`تم تصدير ${allData.length} سجل`, 'success');
   }
 
   async function exportPayrollReport(start, end, siteId, contId) {
       showProgress(10, 'جاري حساب الرواتب...');
+      let query = sb.from('attendance').select('*, workers!inner(*, sites(name), contractors(name))').gte('date',start).lte('date',end).eq('is_approved',true);
+      const allAtt = await fetchAllData(query);
       
-      // Get attendance
-      let attQuery = sb.from('attendance').select('*, workers(*, sites(name), contractors(name))')
-          .gte('date',start).lte('date',end).eq('is_approved',true);
-      
-      const {data:att} = await attQuery;
-      
-      // Group by worker
       const workerDays = {};
-      (att||[]).forEach(a => {
-          if(!workerDays[a.worker_id]) {
-              workerDays[a.worker_id] = {
-                  worker: a.workers,
-                  present: 0,
-                  absent: 0,
-                  half: 0
-              };
-          }
+      allAtt.forEach(a => {
+          if(!workerDays[a.worker_id]) workerDays[a.worker_id] = { worker: a.workers, present: 0, absent: 0, half: 0 };
           if(a.status === 'present') workerDays[a.worker_id].present++;
           else if(a.status === 'absent') workerDays[a.worker_id].absent++;
           else if(a.status === 'half') workerDays[a.worker_id].half += 0.5;
@@ -1843,44 +1799,25 @@
           const totalDays = w.present + w.half;
           const dailyRate = parseFloat(w.worker.basic_salary) || 0;
           const amount = w.worker.payment_type === 'daily' ? totalDays * dailyRate : (totalDays / 30) * dailyRate;
-          return [
-              w.worker.name, w.worker.id_number, w.worker.contractors?.name, w.worker.sites?.name,
-              w.present, w.absent, w.half, totalDays, dailyRate, amount.toFixed(2)
-          ];
+          return [w.worker.name, w.worker.id_number, w.worker.contractors?.name || '', w.worker.sites?.name || 'غير محدد', w.present, w.absent, w.half, totalDays, dailyRate, amount.toFixed(2)];
       });
-      
       exportToExcel([headers, ...rows], 'مسير_الرواتب.xlsx');
       showToast(`تم تصدير مسير ${rows.length} موظف`, 'success');
   }
 
   async function exportContractorReport(start, end, siteId, contId) {
-      let attQuery = sb.from('attendance').select('*, workers(*, contractors(name), sites(name))')
-          .gte('date',start).lte('date',end).eq('is_approved',true);
-      
-      const {data:att} = await attQuery;
-      
-      // Group by contractor and site
+      let query = sb.from('attendance').select('*, workers!inner(*, contractors!inner(name), sites(name))').gte('date',start).lte('date',end).eq('is_approved',true);
+      const allAtt = await fetchAllData(query);
       const contData = {};
-      (att||[]).forEach(a => {
+      allAtt.forEach(a => {
           const key = `${a.workers?.contractor_id}_${a.workers?.current_site_id}`;
-          if(!contData[key]) {
-              contData[key] = {
-                  contractor: a.workers?.contractors?.name,
-                  site: a.workers?.sites?.name,
-                  workers: new Set(),
-                  days: 0
-              };
-          }
+          if(!contData[key]) contData[key] = { contractor: a.workers?.contractors?.name, site: a.workers?.sites?.name || 'عام', workers: new Set(), days: 0 };
           contData[key].workers.add(a.worker_id);
           if(a.status === 'present') contData[key].days++;
           else if(a.status === 'half') contData[key].days += 0.5;
       });
-      
       const headers = ['المقاول','الموقع','عدد العمال','عدد الأيام','المبلغ'];
-      const rows = Object.values(contData).map(c => [
-          c.contractor, c.site, c.workers.size, c.days, (c.days * 100).toFixed(2)
-      ]);
-      
+      const rows = Object.values(contData).map(c => [c.contractor, c.site, c.workers.size, c.days, (c.days * 100).toFixed(2)]);
       exportToExcel([headers, ...rows], 'مستخلص_المقاولين.xlsx');
       showToast(`تم تصدير ${rows.length} بند`, 'success');
   }
@@ -1896,23 +1833,15 @@
   async function loadUsers() {
       const {data} = await sb.from('app_users').select('*, user_sites(site_id)').order('id');
       USERS_CACHE = data || [];
-      
       const sitesOpts = SITES_CACHE.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
       document.getElementById('nUSites').innerHTML = sitesOpts;
       document.getElementById('editUSites').innerHTML = sitesOpts;
       
       document.getElementById('usersList').innerHTML = (data||[]).map(u=>{
-          const userSites = u.user_sites ? u.user_sites.map(us => {
-              const site = SITES_CACHE.find(s => s.id === us.site_id);
-              return site?.name;
-          }).filter(Boolean).join(', ') : 'كل المواقع';
-          
+          const userSites = u.user_sites ? u.user_sites.map(us => { const site = SITES_CACHE.find(s => s.id === us.site_id); return site?.name; }).filter(Boolean).join(', ') : 'كل المواقع';
           return `
       <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:15px; margin-bottom:10px;">
-          <div>
-              <b style="font-size:1.1rem;">${u.full_name}</b><br>
-              <small style="color:var(--text-light);">${u.username} | ${getRoleName(u.role)} | المواقع: ${userSites}</small>
-          </div>
+          <div><b style="font-size:1.1rem;">${u.full_name}</b><br><small style="color:var(--text-light);">${u.username} | ${getRoleName(u.role)} | المواقع: ${userSites}</small></div>
           <div class="flex-row">
               <button onclick="openEditU(${u.id})" class="btn-sm btn-outline">تعديل</button>
               <button onclick="openChangePass(${u.id})" class="btn-sm btn-gray">تغيير كلمة المرور</button>
@@ -1922,36 +1851,15 @@
   }
 
   async function addUser() {
-      const u=document.getElementById('nUName').value, 
-            p=document.getElementById('nUPass').value, 
-            f=document.getElementById('nUFull').value,
-            r=document.getElementById('nURole').value;
-      
+      const u=document.getElementById('nUName').value, p=document.getElementById('nUPass').value, f=document.getElementById('nUFull').value, r=document.getElementById('nURole').value;
       if(!u||!p||!f) return showToast('جميع الحقول مطلوبة', 'error');
-      
       const sitesSelect = document.getElementById('nUSites');
       const selectedSites = Array.from(sitesSelect.selectedOptions).map(o => o.value);
-      
       showLoad(true);
-      const {data:user, error} = await sb.from('app_users').insert({ 
-          username:u, password:p, full_name:f, role:r 
-      }).select().single();
-      
-      if(error) {
-          showLoad(false);
-          return showToast('اسم المستخدم مكرر', 'error');
-      }
-      
-      if(selectedSites.length > 0) {
-          await sb.from('user_sites').insert(selectedSites.map(sid => ({
-              user_id: user.id,
-              site_id: sid
-          })));
-      }
-      
-      document.getElementById('nUName').value='';
-      document.getElementById('nUPass').value='';
-      document.getElementById('nUFull').value='';
+      const {data:user, error} = await sb.from('app_users').insert({ username:u, password:p, full_name:f, role:r }).select().single();
+      if(error) { showLoad(false); return showToast('اسم المستخدم مكرر', 'error'); }
+      if(selectedSites.length > 0) await sb.from('user_sites').insert(selectedSites.map(sid => ({ user_id: user.id, site_id: sid })));
+      document.getElementById('nUName').value=''; document.getElementById('nUPass').value=''; document.getElementById('nUFull').value='';
       await loadUsers();
       showLoad(false);
       showToast('تم إنشاء المستخدم');
@@ -1963,35 +1871,19 @@
       document.getElementById('editUFull').value=u.full_name;
       document.getElementById('editUName').value=u.username;
       document.getElementById('editURole').value=u.role;
-      
       const sitesSelect = document.getElementById('editUSites');
       const userSiteIds = u.user_sites ? u.user_sites.map(us => us.site_id) : [];
-      Array.from(sitesSelect.options).forEach(opt => {
-          opt.selected = userSiteIds.includes(parseInt(opt.value));
-      });
-      
+      Array.from(sitesSelect.options).forEach(opt => { opt.selected = userSiteIds.includes(parseInt(opt.value)); });
       document.getElementById('editUserModal').classList.add('open');
   }
 
   async function saveUserEdit() {
       const id = document.getElementById('editUId').value;
       const selectedSites = Array.from(document.getElementById('editUSites').selectedOptions).map(o => o.value);
-      
       showLoad(true);
-      
-      await sb.from('app_users').update({
-          full_name: document.getElementById('editUFull').value,
-          role: document.getElementById('editURole').value
-      }).eq('id',id);
-      
+      await sb.from('app_users').update({ full_name: document.getElementById('editUFull').value, role: document.getElementById('editURole').value }).eq('id',id);
       await sb.from('user_sites').delete().eq('user_id',id);
-      if(selectedSites.length > 0) {
-          await sb.from('user_sites').insert(selectedSites.map(sid => ({
-              user_id: id,
-              site_id: sid
-          })));
-      }
-      
+      if(selectedSites.length > 0) await sb.from('user_sites').insert(selectedSites.map(sid => ({ user_id: id, site_id: sid })));
       closeModal('editUserModal');
       await loadUsers();
       showLoad(false);
@@ -2009,10 +1901,8 @@
       const id = document.getElementById('passUId').value;
       const p1 = document.getElementById('newPassword').value;
       const p2 = document.getElementById('confirmPassword').value;
-      
       if(p1 !== p2) return showToast('كلمتا المرور غير متطابقتين', 'error');
       if(p1.length < 4) return showToast('كلمة المرور قصيرة', 'error');
-      
       showLoad(true);
       await sb.from('app_users').update({password:p1}).eq('id',id);
       closeModal('changePassModal');
@@ -2033,44 +1923,53 @@
       const {count:sitesCount} = await sb.from('sites').select('*',{count:'exact'});
       const {count:workersCount} = await sb.from('workers').select('*',{count:'exact'}).eq('is_active',true);
       const {count:contsCount} = await sb.from('contractors').select('*',{count:'exact'});
-      
       const today = new Date().toISOString().split('T')[0];
       const {count:todayAtt} = await sb.from('attendance').select('*',{count:'exact'}).eq('date',today);
-      
       document.getElementById('dashSites').innerText = sitesCount || 0;
       document.getElementById('dashWorkers').innerText = workersCount || 0;
       document.getElementById('dashConts').innerText = contsCount || 0;
       document.getElementById('dashTodayAtt').innerText = todayAtt || 0;
-      
       const {data:recentWorkers} = await sb.from('workers').select('*,sites(name)').order('id',{ascending:false}).limit(5);
       document.getElementById('dashRecentWorkers').innerHTML = (recentWorkers||[]).map(w=>`
           <div style="padding:10px; border-bottom:1px solid var(--border-color);">
               <b>${w.name}</b> - <small style="color:var(--text-light);">${w.sites?.name || 'غير محدد'}</small>
-          </div>
-      `).join('') || '<p style="color:var(--text-light);">لا يوجد</p>';
-      
+          </div>`).join('') || '<p style="color:var(--text-light);">لا يوجد</p>';
       const {data:corrections} = await sb.from('correction_requests').select('*').eq('status','pending').limit(5);
       document.getElementById('dashPendingCorrections').innerHTML = (corrections||[]).map(c=>`
           <div style="padding:10px; border-bottom:1px solid var(--border-color);">
               <span class="badge bg-orange">معلق</span> <small>${new Date(c.created_at).toLocaleDateString('ar-SA')}</small>
-          </div>
-      `).join('') || '<p style="color:var(--text-light);">لا يوجد طلبات</p>';
+          </div>`).join('') || '<p style="color:var(--text-light);">لا يوجد طلبات</p>';
   }
 
   // Roles
   function loadRoles() {
-      // الصفحة ثابتة، مفيش حاجة تتحمل ديناميكي
-      console.log('Roles page loaded');
+      const tbody = document.getElementById('rolesTableBody');
+      const roles = [
+          {key: 'admin', name: 'مدير النظام', desc: 'تحكم كامل في جميع مكونات النظام', class: 'bg-blue', icon: 'fa-crown'},
+          {key: 'hr', name: 'موارد بشرية', desc: 'إدارة بيانات العمال والمواقع', class: 'bg-green', icon: 'fa-user-tie'},
+          {key: 'supervisor', name: 'مشرف موقع', desc: 'تسجيل حضور العمال في الموقع', class: 'bg-orange', icon: 'fa-hard-hat'},
+          {key: 'data_entry', name: 'مدخل بيانات', desc: 'اعتماد الحضور المسجل', class: 'bg-gray', icon: 'fa-keyboard'}
+      ];
+      const permissions = [
+          {key: 'workers', label: 'إدارة العمال'}, {key: 'sites', label: 'إدارة المواقع'}, {key: 'attendance', label: 'تسجيل الحضور'},
+          {key: 'approval', label: 'اعتماد الحضور'}, {key: 'reports', label: 'التقارير'}, {key: 'users', label: 'إدارة المستخدمين'}
+      ];
+      tbody.innerHTML = roles.map(role => `
+          <tr>
+              <td><span class="badge ${role.class}" style="font-size:1rem;"><i class="fa-solid ${role.icon}"></i> ${role.name}</span></td>
+              <td>${role.desc}</td>
+              ${permissions.map(perm => `<td style="text-align:center;"><label class="permission-toggle"><input type="checkbox" ${ROLE_PERMISSIONS[role.key][perm.key] ? 'checked' : ''} onchange="toggleRolePermission('${role.key}', '${perm.key}', this.checked)" ${role.key === 'admin' ? 'disabled' : ''}><span>${ROLE_PERMISSIONS[role.key][perm.key] ? '✓' : '✗'}</span></label></td>`).join('')}
+          </tr>`).join('');
   }
 
-  // Init
+  function toggleRolePermission(role, permission, checked) {
+      ROLE_PERMISSIONS[role][permission] = checked;
+      showToast(`تم ${checked ? 'تفعيل' : 'تعطيل'} صلاحية ${permission} لـ ${getRoleName(role)}`);
+  }
+
   window.onload = () => {
       const today = new Date().toISOString().split('T')[0];
-      ['repStart','repEnd'].forEach(id => {
-          const el=document.getElementById(id);
-          if(el) el.value=today;
-      });
-      
+      ['repStart','repEnd'].forEach(id => { const el=document.getElementById(id); if(el) el.value=today; });
       const chk = document.getElementById('editWActive');
       if(chk) {
           chk.onchange = function() {
