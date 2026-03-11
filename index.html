@@ -7,10 +7,11 @@
   
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <!-- إضافة مكتبة Chart.js و jspdf مع دعم العربية -->
+  <!-- إضافة مكتبة Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <!-- استخدام pdf-lib بدلاً من jspdf لدعم العربية -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/downloadjs@1.4.7/download.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -1980,7 +1981,7 @@
       showToast('تم تعديل الحضور');
   }
 
-  // Reports - دعم PDF مع العربية
+  // Reports - دعم PDF مع العربية باستخدام pdf-lib
   function updateReportOptions() {
       const type = document.getElementById('repType').value;
       document.getElementById('repDateRange').style.display = type === 'workers' ? 'none' : 'flex';
@@ -2086,17 +2087,17 @@
       XLSX.writeFile(wb, filename);
   }
 
-  // دوال تصدير PDF مع دعم الخط العربي
+  // دوال تصدير PDF مع دعم العربية باستخدام pdf-lib
   async function exportWorkersPDF(siteId, contId) {
       let query = sb.from('workers').select('*, sites(name), contractors(name)').eq('is_active',true);
       if(siteId) query = query.eq('current_site_id',siteId);
       if(contId) query = query.eq('contractor_id',contId);
       const allData = await fetchAllData(query);
       
-      const headers = [['الاسم', 'رقم الهوية', 'المسمى', 'الراتب', 'نوع الدفع', 'الموقع', 'المقاول']];
+      const headers = ['الاسم', 'رقم الهوية', 'المسمى', 'الراتب', 'نوع الدفع', 'الموقع', 'المقاول'];
       const rows = allData.map(w => [w.name, w.id_number, w.job_title || '', w.basic_salary || '', w.payment_type === 'daily' ? 'يومية' : 'راتب', w.sites?.name || 'غير محدد', w.contractors?.name || '']);
       
-      generatePDF('تقرير بيانات العمال', headers, rows);
+      await generatePDFarabic('تقرير بيانات العمال', headers, rows);
   }
 
   async function exportAttendancePDF(start, end, siteId) {
@@ -2107,7 +2108,7 @@
       const headers = [['التاريخ', 'رقم الهوية', 'الاسم', 'الموقع', 'الحالة']];
       const rows = allData.map(a => [a.date, a.workers?.id_number, a.workers?.name, a.sites?.name || 'غير محدد', a.status==='present'?'حاضر':a.status==='absent'?'غائب':'نصف يوم']);
       
-      generatePDF('تقرير سجل الحضور', headers, rows);
+      await generatePDFarabic('تقرير سجل الحضور', headers, rows);
   }
 
   async function exportPayrollPDF(start, end, siteId, contId) {
@@ -2131,7 +2132,7 @@
           return [w.worker.name, w.worker.id_number, w.worker.contractors?.name || '', w.worker.sites?.name || 'غير محدد', w.present, w.absent, w.half, totalDays, dailyRate, amount.toFixed(2)];
       });
       
-      generatePDF('تقرير مسير الرواتب', headers, rows);
+      await generatePDFarabic('تقرير مسير الرواتب', headers, rows);
   }
 
   async function exportContractorPDF(start, end, siteId, contId) {
@@ -2149,44 +2150,99 @@
       const headers = [['المقاول', 'الموقع', 'عدد العمال', 'عدد الأيام', 'المبلغ']];
       const rows = Object.values(contData).map(c => [c.contractor, c.site, c.workers.size, c.days, (c.days * 100).toFixed(2)]);
       
-      generatePDF('تقرير مستخلص المقاولين', headers, rows);
+      await generatePDFarabic('تقرير مستخلص المقاولين', headers, rows);
   }
 
-  function generatePDF(title, headers, rows) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'landscape' });
-      
-      // استخدام خط يدعم العربية (مثل Helvetica أو أي خط عربي)
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(18);
-      doc.text(title, 14, 15);
-      
-      doc.autoTable({
-          head: headers,
-          body: rows,
-          startY: 25,
-          theme: 'grid',
-          styles: { 
-              font: 'helvetica',
-              halign: 'right',
-              cellPadding: 5,
-              fontSize: 10
-          },
-          headStyles: { 
-              fillColor: [0, 0, 0], 
-              textColor: [255, 255, 255],
-              fontStyle: 'bold'
-          },
-          // دعم النصوص العربية عن طريق عكس النص (لأن jsPDF لا يدعم RTL مباشرة)
-          didDrawCell: function(data) {
-              // هذا الجزء يساعد في عرض العربية بشكل صحيح
-              if (data.section === 'body' && data.column.index === 0) {
-                  // يمكن إضافة معالجة خاصة إذا لزم الأمر
+  // دالة PDF جديدة تدعم العربية
+  async function generatePDFarabic(title, headers, rows) {
+      try {
+          const { PDFDocument, rgb, StandardFonts } = PDFLib;
+          
+          // إنشاء مستند PDF جديد
+          const pdfDoc = await PDFDocument.create();
+          
+          // إضافة صفحة
+          let page = pdfDoc.addPage([841.89, 595.28]); // A4 landscape
+          
+          // الحصول على الخط الافتراضي (Helvetica)
+          const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+          
+          // كتابة العنوان
+          page.drawText(title, {
+              x: 50,
+              y: page.getHeight() - 50,
+              size: 18,
+              font: font,
+              color: rgb(0, 0, 0),
+          });
+          
+          // إعداد الجدول يدوياً (بسيط)
+          let y = page.getHeight() - 80;
+          const cellWidth = 80;
+          const cellHeight = 25;
+          
+          // رسم رأس الجدول
+          headers[0].forEach((header, index) => {
+              page.drawText(header, {
+                  x: 50 + (index * cellWidth),
+                  y: y,
+                  size: 10,
+                  font: font,
+                  color: rgb(0, 0, 0),
+              });
+          });
+          
+          y -= cellHeight;
+          
+          // رسم البيانات
+          rows.forEach(row => {
+              row.forEach((cell, index) => {
+                  page.drawText(cell?.toString() || '', {
+                      x: 50 + (index * cellWidth),
+                      y: y,
+                      size: 8,
+                      font: font,
+                      color: rgb(0, 0, 0),
+                  });
+              });
+              y -= cellHeight;
+              
+              // إذا وصلنا لنهاية الصفحة، أضف صفحة جديدة
+              if (y < 50) {
+                  page = pdfDoc.addPage([841.89, 595.28]);
+                  y = page.getHeight() - 50;
+                  
+                  // إعادة رسم الرأس في الصفحة الجديدة
+                  headers[0].forEach((header, index) => {
+                      page.drawText(header, {
+                          x: 50 + (index * cellWidth),
+                          y: y,
+                          size: 10,
+                          font: font,
+                          color: rgb(0, 0, 0),
+                      });
+                  });
+                  y -= cellHeight;
               }
-          }
-      });
-      
-      doc.save(`${title}.pdf`);
+          });
+          
+          // حفظ PDF
+          const pdfBytes = await pdfDoc.save();
+          
+          // تحميل الملف
+          const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${title}.pdf`;
+          link.click();
+          window.URL.revokeObjectURL(url);
+          
+          showToast('تم إنشاء ملف PDF بنجاح');
+      } catch (error) {
+          console.error('خطأ في إنشاء PDF:', error);
+          showToast('حدث خطأ في إنشاء ملف PDF', 'error');
+      }
   }
 
   // Users
