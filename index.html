@@ -103,8 +103,28 @@
         box-shadow: 0 2px 6px rgba(0,0,0,0.04); 
         border: 1px solid var(--border-color);
         position: relative; 
+        transition: 0.3s ease;
     }
-    .inactive-card { opacity: 0.7; background: #f9f9f9; } 
+    
+    /* تحسين البطاقات غير النشطة */
+    .inactive-card { 
+        opacity: 0.7; 
+        background: #f9f9fa; 
+        border: 1px dashed #ccc; 
+    } 
+
+    /* تأثير عند التحديد */
+    .card.selected, .worker-card.selected { 
+        background: #e3f2fd; 
+        border-right: 4px solid var(--blue); 
+        animation: highlight 0.3s ease;
+    }
+
+    @keyframes highlight {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.01); }
+        100% { transform: scale(1); }
+    }
 
     .sub-tabs { 
         display: flex; 
@@ -167,6 +187,7 @@
         white-space: nowrap;
     }
     .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .btn-gold { background: var(--primary); color: white; }
     .btn-green { background: var(--green); color: white; }
     .btn-red { background: var(--red); color: white; }
@@ -180,6 +201,7 @@
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
     .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; }
+    .grid-5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 20px; }
     .flex-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
     .hidden { display: none !important; }
     
@@ -224,9 +246,13 @@
     .att-present { background: var(--green); color: white; }
     .att-absent { background: var(--red); color: white; }
     .att-half { background: var(--orange); color: white; }
-    .attendance-btn:hover { transform: scale(1.05); }
+    
+    /* تحسين أزرار الحضور */
+    .attendance-btn:hover { 
+        transform: scale(1.05); 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+    }
 
-    /* Counter Bar */
     .counter-bar { 
         background: var(--bg-white); 
         padding: 15px 25px; 
@@ -242,10 +268,8 @@
     .counter-item .number { font-size: 1.8rem; font-weight: bold; color: var(--primary); }
     .counter-item .label { color: var(--text-light); font-size: 0.9rem; }
 
-    /* Checkbox styling */
     .custom-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
 
-    /* Worker card with checkbox */
     .worker-card { 
         display: flex; 
         align-items: center; 
@@ -255,9 +279,7 @@
         transition: 0.3s;
     }
     .worker-card:hover { background: #f8f9fa; }
-    .worker-card.selected { background: #e3f2fd; border-right: 4px solid var(--blue); }
 
-    /* Roles Table - Interactive */
     .roles-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
     .roles-table th, .roles-table td { padding: 15px; text-align: right; border-bottom: 1px solid var(--border-color); }
     .roles-table th { background: var(--bg-main); font-weight: bold; }
@@ -280,39 +302,16 @@
         cursor: pointer;
     }
 
-    /* Progress bar for large exports */
     .progress-container { width: 100%; max-width: 400px; margin: 20px auto; }
     .progress-bar { width: 100%; height: 20px; background: #e9ecef; border-radius: 10px; overflow: hidden; }
     .progress-fill { height: 100%; background: var(--green); transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; }
 
     @media (max-width: 768px) {
-        .sidebar { 
-            position: fixed; 
-            right: -260px; 
-            height: 100vh; 
-            transition: 0.3s;
-            z-index: 1001;
-        }
+        .sidebar { position: fixed; right: -260px; height: 100vh; transition: 0.3s; z-index: 1001; }
         .sidebar.active { right: 0; }
         .main-content { margin-right: 0; }
-        .menu-toggle { 
-            display: flex !important; 
-            position: fixed; 
-            top: 20px; 
-            right: 20px; 
-            font-size: 1.5rem; 
-            color: var(--primary); 
-            z-index: 1002; 
-            cursor: pointer;
-            background: white;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .grid-4 { grid-template-columns: 1fr 1fr; }
+        .menu-toggle { display: flex !important; position: fixed; top: 20px; right: 20px; font-size: 1.5rem; color: var(--primary); z-index: 1002; cursor: pointer; background: white; width: 45px; height: 45px; border-radius: 50%; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .grid-5, .grid-4 { grid-template-columns: 1fr 1fr; }
         .grid-3 { grid-template-columns: 1fr; }
         .grid-2 { grid-template-columns: 1fr; }
     }
@@ -485,7 +484,7 @@
     </div>
 
     <div id="v-dashboard" class="view-section hidden">
-        <div class="grid-4" style="margin-bottom:25px;">
+        <div class="grid-5" style="margin-bottom:25px;">
             <div class="stat-card">
                 <i class="fa-solid fa-building" style="color:var(--blue);"></i>
                 <div class="number" id="dashSites">0</div>
@@ -495,6 +494,11 @@
                 <i class="fa-solid fa-users" style="color:var(--green);"></i>
                 <div class="number" id="dashWorkers">0</div>
                 <div class="label">العمال النشطين</div>
+            </div>
+            <div class="stat-card">
+                <i class="fa-solid fa-user-slash" style="color:var(--text-light);"></i>
+                <div class="number" id="dashInactiveWorkers">0</div>
+                <div class="label">العمال الموقوفين</div>
             </div>
             <div class="stat-card">
                 <i class="fa-solid fa-handshake" style="color:var(--orange);"></i>
@@ -532,10 +536,30 @@
                  <div><label class="input-label-secondary">تصفية بالموقع</label><select id="filtSite" onchange="renderWorkers()"><option value="">كل المواقع</option></select></div>
                  <div><label class="input-label-secondary">تصفية بالمقاول</label><select id="filtCont" onchange="renderWorkers()"><option value="">كل المقاولين</option></select></div>
              </div>
+             
+             <div class="counter-bar" id="workersStatsBar" style="margin-bottom: 20px; display: none; padding: 15px; background: var(--bg-main);"></div>
+             
              <div class="flex-row" style="justify-content:space-between; margin-bottom:15px;">
-                 <label style="cursor:pointer; color:var(--text-light); display:flex; align-items:center; gap:8px;"><input type="checkbox" id="showInactiveW" onchange="renderWorkers()" style="width:auto; margin:0;"> عرض الموقوفين</label>
+                 <label style="cursor:pointer; color:var(--text-light); display:flex; align-items:center; gap:8px;">
+                     <input type="checkbox" id="showInactiveW" onchange="renderWorkers()" style="width:auto; margin:0;"> 
+                     عرض الموقوفين
+                 </label>
                  <button onclick="loadWorkersFull(true)" class="btn btn-sm btn-outline"><i class="fa-solid fa-sync"></i> تحديث</button>
              </div>
+
+             <div class="flex-row" style="margin-bottom:15px; background:var(--bg-main); padding:15px; border-radius:8px;">
+                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:bold;">
+                     <input type="checkbox" id="selectAllWorkers" onchange="toggleSelectAllWorkers()" class="custom-checkbox">
+                     تحديد الكل
+                 </label>
+                 <div class="flex-row" style="margin-right:auto;">
+                     <span id="selectedWorkersCountText" style="color:var(--text-light); font-weight:bold;">تم اختيار 0</span>
+                     <button onclick="bulkDeleteWorkers()" class="btn btn-sm btn-red" id="bulkDeleteBtn" disabled>
+                         <i class="fa-solid fa-trash"></i> حذف المحددين
+                     </button>
+                 </div>
+             </div>
+
              <div id="workersList"></div>
              <div id="workersLoadMore"></div>
        </div>
@@ -801,7 +825,8 @@
   let WORKERS_PAGE = 0;
   const WORKERS_PER_PAGE = 100;
   let ALL_WORKERS_LOADED = false;
-  let SELECTED_WORKERS = new Set();
+  let SELECTED_WORKERS = new Set(); 
+  let SELECTED_WORKERS_DELETE = new Set(); // للمسح الجماعي
   
   // Attendance pagination variables
   let ATTENDANCE_PAGE = 0;
@@ -816,6 +841,22 @@
       supervisor: { workers: false, sites: false, attendance: true, approval: false, reports: false, users: false },
       data_entry: { workers: false, sites: false, attendance: false, approval: true, reports: false, users: false }
   };
+
+  // --- دوال الأمان الجديدة (التشفير والصلاحيات) ---
+  async function hashPassword(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function checkPermission(permission) {
+      if(!ROLE_PERMISSIONS[CUR_USER.role][permission]) {
+          showToast('لا تملك صلاحية الوصول لهذا الإجراء', 'error');
+          return false;
+      }
+      return true;
+  }
 
   // Toast
   function showToast(msg, type='success') {
@@ -860,26 +901,16 @@
       if(v === 'roles') loadRoles();
   }
 
-  // --- HELPER FOR LARGE DATA FETCHING ---
   async function fetchAllData(queryBuilder, maxRecords = 100000) {
       let allData = [];
       let from = 0;
       const chunk = 1000;
       
       while(allData.length < maxRecords) {
-          // Must clone query for range to work properly in loop
-          // Using order by id to ensure stable pagination
           const {data, error} = await queryBuilder.range(from, from + chunk - 1).order('id');
-          
-          if(error) {
-              console.error('Fetch error:', error);
-              break;
-          }
-          
+          if(error) { console.error('Fetch error:', error); break; }
           if(!data || data.length === 0) break;
-          
           allData.push(...data);
-          
           if(data.length < chunk) break;
           from += chunk;
       }
@@ -893,9 +924,11 @@
       showLoad(true);
       
       const {data, error} = await sb.from('app_users').select('*, user_sites(site_id)').eq('username',u).single();
-      showLoad(false);
+      const hashedP = await hashPassword(p);
       
-      if(error || !data || data.password !== p) {
+      // الدخول يقبل الباسورد المشفر أو القديم العادي
+      if(error || !data || (data.password !== p && data.password !== hashedP)) {
+          showLoad(false);
           showToast('اسم المستخدم أو كلمة المرور غير صحيحة', 'error');
           return;
       }
@@ -919,21 +952,15 @@
 
   function setupPermissions() {
       const r = CUR_USER.role;
-      const isAdmin = r === 'admin';
-      const isHR = r === 'hr';
-      
-      if(isAdmin) {
+      if(r === 'admin') {
           ['dashboard','workers','sites','contractors','attendance','approval','reports','corrections','users','roles'].forEach(id => {
               document.getElementById('n-'+id)?.classList.remove('hidden');
           });
           nav('dashboard');
-      } else if(isHR) {
+      } else if(r === 'hr') {
           ['workers','sites','reports'].forEach(id => document.getElementById('n-'+id)?.classList.remove('hidden'));
           const repType = document.getElementById('repType');
-          repType.innerHTML = `
-              <option value="attendance_log">📅 سجل الحضور والانصراف</option>
-              <option value="workers">👷 قاعدة بيانات الموظفين</option>
-          `;
+          repType.innerHTML = `<option value="attendance_log">📅 سجل الحضور والانصراف</option><option value="workers">👷 قاعدة بيانات الموظفين</option>`;
           nav('workers');
       } else if(r === 'supervisor') {
           document.getElementById('n-attendance')?.classList.remove('hidden');
@@ -947,7 +974,6 @@
   async function loadData() {
       showLoad(true);
       await Promise.all([loadSites(), loadConts()]);
-      // Admin/HR see workers list by default
       if(CUR_USER.role === 'admin' || CUR_USER.role === 'hr') loadWorkersFull(true);
       if(CUR_USER.role === 'admin') loadUsers();
       showLoad(false);
@@ -978,6 +1004,7 @@
   }
 
   async function addSite() {
+      if(!checkPermission('sites')) return;
       const n=document.getElementById('nSite').value, c=document.getElementById('nSiteCont').value;
       if(!n) return showToast('يرجى إدخال اسم الموقع', 'error');
       showLoad(true);
@@ -989,6 +1016,7 @@
   }
 
   async function toggleSiteActive(id, active) {
+      if(!checkPermission('sites')) return;
       showLoad(true);
       await sb.from('sites').update({is_active:active}).eq('id',id);
       await loadSites();
@@ -997,6 +1025,7 @@
   }
 
   async function delSite(id) {
+      if(!checkPermission('sites')) return;
       if(!confirm('هل أنت متأكد؟')) return;
       showLoad(true);
       await sb.from('sites').delete().eq('id',id);
@@ -1029,6 +1058,7 @@
   }
 
   async function addCont() {
+      if(!checkPermission('sites')) return;
       const n=document.getElementById('nCont').value;
       if(!n) return showToast('يرجى إدخال اسم المقاول', 'error');
       showLoad(true);
@@ -1040,6 +1070,7 @@
   }
 
   async function toggleContActive(id, active) {
+      if(!checkPermission('sites')) return;
       showLoad(true);
       await sb.from('contractors').update({is_active:active}).eq('id',id);
       await loadConts();
@@ -1048,6 +1079,7 @@
   }
 
   async function delCont(id) {
+      if(!checkPermission('sites')) return;
       if(!confirm('هل أنت متأكد؟')) return;
       showLoad(true);
       await sb.from('contractors').delete().eq('id',id);
@@ -1068,6 +1100,10 @@
           WORKERS_PAGE = 0;
           ALL_WORKERS = [];
           ALL_WORKERS_LOADED = false;
+          SELECTED_WORKERS_DELETE.clear();
+          updateSelectedWorkersCount();
+          if(document.getElementById('selectAllWorkers')) document.getElementById('selectAllWorkers').checked = false;
+          
           document.getElementById('workersList').innerHTML = '<div style="text-align:center; padding:20px;"><div class="spinner"></div></div>';
           document.getElementById('workersLoadMore').innerHTML = '';
       }
@@ -1079,7 +1115,6 @@
       
       let query = sb.from('workers')
           .select('*, sites(name), contractors(name), supervisors:assigned_supervisor_id(full_name)', {count: 'exact'})
-          .eq('is_active', true)
           .order('name')
           .range(from, to);
       
@@ -1120,6 +1155,68 @@
       }
   }
 
+  // دوال الحذف الجماعي للعمال
+  function toggleWorkerSelectionDelete(id) {
+      const checkbox = document.querySelector(`#worker-card-${id} .worker-select-checkbox`);
+      const card = document.getElementById(`worker-card-${id}`);
+      if(checkbox && checkbox.checked) {
+          SELECTED_WORKERS_DELETE.add(id);
+          card.classList.add('selected');
+      } else {
+          SELECTED_WORKERS_DELETE.delete(id);
+          if(card) card.classList.remove('selected');
+      }
+      updateSelectedWorkersCount();
+  }
+
+  function toggleSelectAllWorkers() {
+      const checked = document.getElementById('selectAllWorkers').checked;
+      const checkboxes = document.querySelectorAll('.worker-select-checkbox');
+      
+      if(checked) {
+          checkboxes.forEach(cb => {
+              cb.checked = true;
+              const id = parseInt(cb.value);
+              SELECTED_WORKERS_DELETE.add(id);
+              document.getElementById(`worker-card-${id}`).classList.add('selected');
+          });
+      } else {
+          SELECTED_WORKERS_DELETE.clear();
+          checkboxes.forEach(cb => {
+              cb.checked = false;
+              const id = parseInt(cb.value);
+              document.getElementById(`worker-card-${id}`).classList.remove('selected');
+          });
+      }
+      updateSelectedWorkersCount();
+  }
+
+  function updateSelectedWorkersCount() {
+      const count = SELECTED_WORKERS_DELETE.size;
+      document.getElementById('selectedWorkersCountText').innerText = `تم اختيار ${count}`;
+      document.getElementById('bulkDeleteBtn').disabled = count === 0;
+  }
+
+  async function bulkDeleteWorkers() {
+      if(CUR_USER.role !== 'admin') return showToast('صلاحية الحذف للمدير فقط', 'error');
+      
+      const ids = Array.from(SELECTED_WORKERS_DELETE);
+      if(ids.length === 0) return;
+      if(!confirm(`متأكد إنك عايز تحذف ${ids.length} موظف بشكل نهائي؟`)) return;
+
+      showLoad(true, 'جاري الحذف...');
+      const {error} = await sb.from('workers').delete().in('id', ids);
+      showLoad(false);
+
+      if(error) return showToast('حصل خطأ أثناء الحذف', 'error');
+      
+      showToast(`تم حذف ${ids.length} موظف بنجاح`);
+      SELECTED_WORKERS_DELETE.clear();
+      document.getElementById('selectAllWorkers').checked = false;
+      updateSelectedWorkersCount();
+      loadWorkersFull(true);
+  }
+
   function renderWorkers() {
       const q = document.getElementById('searchW').value.toLowerCase().trim();
       const s = document.getElementById('filtSite').value;
@@ -1136,9 +1233,48 @@
       
       if(q && res.length < 10 && !ALL_WORKERS_LOADED) loadWorkersFull(false);
       
+      // --- بداية كود العدادات الجديد ---
+      const activeWorkers = res.filter(w => w.is_active !== false);
+      const inactiveWorkers = res.filter(w => w.is_active === false);
+      
+      const siteCounts = {};
+      activeWorkers.forEach(w => {
+          const siteName = w.sites?.name || 'غير محدد';
+          siteCounts[siteName] = (siteCounts[siteName] || 0) + 1;
+      });
+
+      let statsHtml = `
+          <div class="counter-item">
+              <div class="number" style="color:var(--green)">${activeWorkers.length}</div>
+              <div class="label">إجمالي النشطين</div>
+          </div>
+          <div class="counter-item" style="${inactiveWorkers.length === 0 ? 'opacity:0.5;' : ''}">
+              <div class="number" style="color:var(--text-light)">${inactiveWorkers.length}</div>
+              <div class="label">الموقوفين</div>
+          </div>
+          <div style="width: 2px; background: var(--border-color); margin: 0 10px;"></div>
+      `;
+
+      for (const [site, count] of Object.entries(siteCounts)) {
+          statsHtml += `
+          <div class="counter-item">
+              <div class="number" style="color:var(--blue); font-size:1.5rem;">${count}</div>
+              <div class="label"><i class="fa-solid fa-map-pin"></i> ${site}</div>
+          </div>
+          `;
+      }
+
+      const statsBar = document.getElementById('workersStatsBar');
+      if(statsBar) {
+          statsBar.innerHTML = statsHtml;
+          statsBar.style.display = 'flex';
+      }
+      // --- نهاية كود العدادات الجديد ---
+      
       document.getElementById('workersList').innerHTML = res.map(w => `
-      <div class="card ${w.is_active===false?'inactive-card':''}" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:15px;">
+      <div class="card ${w.is_active===false?'inactive-card':''} ${SELECTED_WORKERS_DELETE.has(w.id)?'selected':''}" id="worker-card-${w.id}" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:15px;">
           <div style="display:flex; align-items:center; gap:15px;">
+              <input type="checkbox" class="worker-select-checkbox custom-checkbox" value="${w.id}" onchange="toggleWorkerSelectionDelete(${w.id})" ${SELECTED_WORKERS_DELETE.has(w.id)?'checked':''}>
               <div style="width:50px; height:50px; background:#eee; border-radius:50%; display:flex; justify-content:center; align-items:center; font-weight:bold; color:#777; font-size:1.2rem;">${w.name.charAt(0)}</div>
               <div>
                   <b style="font-size:1.1rem;">${w.name}</b>
@@ -1158,6 +1294,7 @@
   }
 
   async function toggleWorkerActive(id, active) {
+      if(!checkPermission('workers')) return;
       showLoad(true);
       await sb.from('workers').update({is_active:active}).eq('id',id);
       await loadWorkersFull(true);
@@ -1166,6 +1303,7 @@
   }
 
   async function addWorker() {
+      if(!checkPermission('workers')) return;
       const idNum = document.getElementById('newWIqama').value.trim();
       const d = {
           id_number: idNum,
@@ -1215,6 +1353,7 @@
   }
 
   async function saveWorkerEdit() {
+      if(!checkPermission('workers')) return;
       const id = document.getElementById('editWId').value;
       showLoad(true);
       const {error} = await sb.from('workers').update({
@@ -1234,6 +1373,7 @@
   }
 
   async function delWorker(id) {
+      if(CUR_USER.role !== 'admin') return showToast('صلاحية الحذف للمدير فقط', 'error');
       if(!confirm('تحذير: سيتم حذف العامل نهائياً. هل أنت متأكد؟')) return;
       showLoad(true);
       await sb.from('workers').delete().eq('id',id);
@@ -1242,7 +1382,6 @@
       showToast('تم حذف الموظف');
   }
 
-  // Excel Upload
   function downloadTemplate() {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([["الاسم الرباعي","رقم الهوية","المسمى الوظيفي","الراتب الأساسي","نوع الدفع (راتب/يومية)","اسم الموقع","اسم المشرف","اسم المقاول"]]);
@@ -1251,6 +1390,7 @@
   }
 
   async function handleExcelUpload(input) {
+      if(!checkPermission('workers')) return;
       const file = input.files[0];
       if(!file) return;
       if(!confirm('سيتم استيراد البيانات. هل تريد المتابعة؟')) { input.value=''; return; }
@@ -1317,12 +1457,10 @@
       SELECTED_WORKERS.clear();
       updateSelectedCount();
       
-      // Reset pagination
       ATTENDANCE_PAGE = 0;
       ALL_PENDING_WORKERS = [];
       ALL_ATTENDANCE_LOADED = false;
       
-      // FIXED: Use loop to fetch ALL workers without limit
       let allWorkers = [];
       let from = 0;
       const chunk = 1000;
@@ -1339,7 +1477,6 @@
           from += chunk;
       }
       
-      // FIXED: Use loop to fetch ALL existing attendance without limit
       let existingAtt = [];
       let attFrom = 0;
       while(true) {
@@ -1434,7 +1571,6 @@
       const checked = document.getElementById('selectAllAtt').checked;
       if(checked) {
           ALL_PENDING_WORKERS.forEach(w => SELECTED_WORKERS.add(w.id));
-          // Only rendering if page is loaded
           document.querySelectorAll('#attendanceRegisterList input[type="checkbox"]').forEach(cb => {
              cb.checked = true;
              const id = parseInt(cb.value);
@@ -1467,6 +1603,7 @@
   }
 
   async function submitBulkAttendance() {
+      if(!checkPermission('attendance')) return;
       const status = document.getElementById('bulkStatus').value;
       const date = document.getElementById('attDate').value;
       const siteId = document.getElementById('attSite').value;
@@ -1505,6 +1642,7 @@
   }
 
   async function registerAttendance(workerId, status) {
+      if(!checkPermission('attendance')) return;
       const date = document.getElementById('attDate').value;
       const siteId = document.getElementById('attSite').value;
       const {data:existing} = await sb.from('attendance').select('id').eq('worker_id',workerId).eq('date',date).single();
@@ -1568,7 +1706,6 @@
       if(date) query = query.eq('date',date);
       if(siteId) query = query.eq('site_id',siteId);
       
-      // FIXED: Use fetchAllData to ensure ALL pending records are loaded
       const attendanceData = await fetchAllData(query);
       
       const totalCount = attendanceData.length;
@@ -1611,6 +1748,7 @@
   }
 
   async function bulkApprove(action) {
+      if(!checkPermission('approval')) return;
       const selected = Array.from(document.querySelectorAll('.pending-checkbox:checked')).map(cb => cb.value);
       if(selected.length === 0) return showToast('يرجى اختيار سجل واحد على الأقل', 'warning');
       if(!confirm(`هل أنت متأكد من ${action === 'approve' ? 'اعتماد' : action === 'reject' ? 'رفض' : 'حذف'} ${selected.length} سجل؟`)) return;
@@ -1638,6 +1776,7 @@
   }
 
   async function approveAttendance(id, approve) {
+      if(!checkPermission('approval')) return;
       showLoad(true);
       if(approve) {
           await sb.from('attendance').update({is_approved:true, approved_by:CUR_USER.id, approved_at:new Date().toISOString()}).eq('id',id);
@@ -1657,7 +1796,6 @@
       if(date) query = query.eq('date',date);
       if(siteId) query = query.eq('site_id',siteId);
       
-      // FIXED: Use fetchAllData here too
       const data = await fetchAllData(query);
       
       document.getElementById('approvedAttendanceList').innerHTML = (data||[]).map(a => `
@@ -1704,6 +1842,7 @@
   }
 
   async function approveCorrection(reqId, attId) {
+      if(!checkPermission('approval')) return;
       const {data:att} = await sb.from('attendance').select('*, workers(name)').eq('id',attId).single();
       document.getElementById('editAttId').value = att.id;
       document.getElementById('editAttWorker').value = att.workers?.name;
@@ -1714,6 +1853,7 @@
   }
 
   async function rejectCorrection(id) {
+      if(!checkPermission('approval')) return;
       if(!confirm('رفض الطلب؟')) return;
       showLoad(true);
       await sb.from('correction_requests').update({status:'rejected'}).eq('id',id);
@@ -1722,6 +1862,7 @@
   }
 
   async function saveAttendanceEdit() {
+      if(!checkPermission('approval')) return;
       const id = document.getElementById('editAttId').value;
       const status = document.getElementById('editAttStatus').value;
       showLoad(true);
@@ -1739,6 +1880,7 @@
   }
 
   async function genReport() {
+      if(!checkPermission('reports')) return;
       const type = document.getElementById('repType').value;
       const start = document.getElementById('repStart').value;
       const end = document.getElementById('repEnd').value;
@@ -1758,7 +1900,6 @@
       document.getElementById('progressContainer').classList.add('hidden');
   }
 
-  // FIXED REPORT FUNCTIONS
   async function exportWorkersReport(siteId, contId) {
       let query = sb.from('workers').select('*, sites(name), contractors(name)').eq('is_active',true);
       if(siteId) query = query.eq('current_site_id',siteId);
@@ -1851,18 +1992,22 @@
   }
 
   async function addUser() {
+      if(!checkPermission('users')) return;
       const u=document.getElementById('nUName').value, p=document.getElementById('nUPass').value, f=document.getElementById('nUFull').value, r=document.getElementById('nURole').value;
       if(!u||!p||!f) return showToast('جميع الحقول مطلوبة', 'error');
       const sitesSelect = document.getElementById('nUSites');
       const selectedSites = Array.from(sitesSelect.selectedOptions).map(o => o.value);
       showLoad(true);
-      const {data:user, error} = await sb.from('app_users').insert({ username:u, password:p, full_name:f, role:r }).select().single();
+      
+      const hashedP = await hashPassword(p);
+      const {data:user, error} = await sb.from('app_users').insert({ username:u, password:hashedP, full_name:f, role:r }).select().single();
       if(error) { showLoad(false); return showToast('اسم المستخدم مكرر', 'error'); }
+      
       if(selectedSites.length > 0) await sb.from('user_sites').insert(selectedSites.map(sid => ({ user_id: user.id, site_id: sid })));
       document.getElementById('nUName').value=''; document.getElementById('nUPass').value=''; document.getElementById('nUFull').value='';
       await loadUsers();
       showLoad(false);
-      showToast('تم إنشاء المستخدم');
+      showToast('تم إنشاء المستخدم بنجاح بالباسورد المشفر');
   }
 
   function openEditU(id) {
@@ -1878,6 +2023,7 @@
   }
 
   async function saveUserEdit() {
+      if(!checkPermission('users')) return;
       const id = document.getElementById('editUId').value;
       const selectedSites = Array.from(document.getElementById('editUSites').selectedOptions).map(o => o.value);
       showLoad(true);
@@ -1898,19 +2044,22 @@
   }
 
   async function savePasswordChange() {
+      if(!checkPermission('users')) return;
       const id = document.getElementById('passUId').value;
       const p1 = document.getElementById('newPassword').value;
       const p2 = document.getElementById('confirmPassword').value;
       if(p1 !== p2) return showToast('كلمتا المرور غير متطابقتين', 'error');
       if(p1.length < 4) return showToast('كلمة المرور قصيرة', 'error');
       showLoad(true);
-      await sb.from('app_users').update({password:p1}).eq('id',id);
+      const hashedP = await hashPassword(p1);
+      await sb.from('app_users').update({password:hashedP}).eq('id',id);
       closeModal('changePassModal');
       showLoad(false);
-      showToast('تم تغيير كلمة المرور');
+      showToast('تم تغيير كلمة المرور وتشفيرها بنجاح');
   }
 
   async function delUser(id) {
+      if(!checkPermission('users')) return;
       if(!confirm('حذف المستخدم؟')) return;
       showLoad(true);
       await sb.from('app_users').delete().eq('id',id);
@@ -1922,13 +2071,19 @@
   async function loadDashboard() {
       const {count:sitesCount} = await sb.from('sites').select('*',{count:'exact'});
       const {count:workersCount} = await sb.from('workers').select('*',{count:'exact'}).eq('is_active',true);
+      const {count:inactiveWorkersCount} = await sb.from('workers').select('*',{count:'exact'}).eq('is_active',false);
       const {count:contsCount} = await sb.from('contractors').select('*',{count:'exact'});
       const today = new Date().toISOString().split('T')[0];
       const {count:todayAtt} = await sb.from('attendance').select('*',{count:'exact'}).eq('date',today);
+      
       document.getElementById('dashSites').innerText = sitesCount || 0;
       document.getElementById('dashWorkers').innerText = workersCount || 0;
+      if(document.getElementById('dashInactiveWorkers')) {
+          document.getElementById('dashInactiveWorkers').innerText = inactiveWorkersCount || 0;
+      }
       document.getElementById('dashConts').innerText = contsCount || 0;
       document.getElementById('dashTodayAtt').innerText = todayAtt || 0;
+      
       const {data:recentWorkers} = await sb.from('workers').select('*,sites(name)').order('id',{ascending:false}).limit(5);
       document.getElementById('dashRecentWorkers').innerHTML = (recentWorkers||[]).map(w=>`
           <div style="padding:10px; border-bottom:1px solid var(--border-color);">
