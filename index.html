@@ -7,11 +7,11 @@
   
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <!-- إضافة مكتبة Chart.js -->
+  <!-- إضافة مكتبة Chart.js و jspdf مع دعم العربية -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- استخدام pdf-lib بدلاً من jspdf لدعم العربية -->
-  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="https://unpkg.com/downloadjs@1.4.7/download.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -482,7 +482,7 @@
     <button onclick="nav('roles')" id="n-roles" class="nav-btn hidden"><i class="fa-solid fa-key"></i> الأدوار والصلاحيات</button>
     
     <div style="flex:1;"></div>
-    <button onclick="location.reload()" class="nav-btn" style="color:#ff6b6b;"><i class="fa-solid fa-arrow-right-from-bracket"></i> تسجيل خروج</button>
+    <button onclick="logout()" class="nav-btn" style="color:#ff6b6b;"><i class="fa-solid fa-arrow-right-from-bracket"></i> تسجيل خروج</button>
   </div>
 
   <div class="main-content" onclick="document.getElementById('sidebar').classList.remove('active')">
@@ -584,6 +584,21 @@
        </div>
 
        <div id="hr-list-view" class="card" style="border-radius:0 0 12px 12px;">
+             <!-- إحصائيات النظام: إجمالي العاملين / نشط / موقوف -->
+             <div class="counter-bar" id="workersGlobalStatsBar" style="margin-bottom:20px; background:linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                <div class="counter-item">
+                   <div class="number" id="workersTotalCount">-</div>
+                   <div class="label">إجمالي العاملين على النظام</div>
+                </div>
+                <div class="counter-item">
+                   <div class="number" id="workersActiveCount" style="color:var(--green);">-</div>
+                   <div class="label">نشط</div>
+                </div>
+                <div class="counter-item">
+                   <div class="number" id="workersInactiveCount" style="color:var(--text-light);">-</div>
+                   <div class="label">موقوف</div>
+                </div>
+             </div>
              <div class="grid-3" style="margin-bottom:20px;">
                  <div><label class="input-label-secondary">بحث</label><input type="text" id="searchW" oninput="renderWorkers()" placeholder="الاسم أو الهوية..."></div>
                  <div><label class="input-label-secondary">تصفية بالموقع</label><select id="filtSite" onchange="renderWorkers(); saveFiltersToStorage();"><option value="">كل المواقع</option></select></div>
@@ -955,7 +970,7 @@
       document.getElementById('breadcrumbCurrent').innerText = btn ? btn.innerText.trim() : '';
       
       if(v === 'dashboard') loadDashboard();
-      if(v === 'workers') loadFiltersFromStorage(); // استعادة الفلاتر المحفوظة
+      if(v === 'workers') { loadFiltersFromStorage(); loadWorkersPageGlobalStats(); }
       if(v === 'attendance') { initAttendanceFilters(); loadAttendanceRegister(); }
       if(v === 'approval') { initApprovalFilters(); loadPendingApproval(); }
       if(v === 'corrections') loadCorrections();
@@ -998,17 +1013,53 @@
       return allData;
   }
 
+  // حفظ الجلسة في localStorage (بدون كلمة مرور - لأمان أفضل)
+  function saveUserToStorage(user) {
+      try {
+          localStorage.setItem('hr_user', JSON.stringify({
+              id: user.id,
+              full_name: user.full_name,
+              role: user.role,
+              sites: user.sites || []
+          }));
+      } catch (e) { console.warn('تعذر حفظ الجلسة', e); }
+  }
+
+  function loadUserFromStorage() {
+      try {
+          const saved = localStorage.getItem('hr_user');
+          if (!saved) return false;
+          const user = JSON.parse(saved);
+          if (!user || !user.id) return false;
+          // استرجاع بيانات المستخدم الكاملة من السيرفر للتأكد من الصلاحيات
+          showLoad(true, 'جاري استعادة الجلسة...');
+          CUR_USER = user;
+          document.getElementById('loginScreen').style.display = 'none';
+          document.getElementById('appLayout').classList.remove('hidden');
+          document.getElementById('sidebarUser').innerText = user.full_name;
+          document.getElementById('sidebarRole').innerText = getRoleName(user.role);
+          setupPermissions();
+          loadData().then(() => showLoad(false));
+          return true;
+      } catch (e) { return false; }
+  }
+
+  function logout() {
+      localStorage.removeItem('hr_user');
+      location.reload();
+  }
+
   // Login
   async function login() {
-      const u=document.getElementById('uName').value, p=document.getElementById('uPass').value;
-      if(!u || !p) return showToast('يرجى إدخال اسم المستخدم وكلمة المرور', 'error');
+      const u = (document.getElementById('uName').value || '').trim();
+      const p = document.getElementById('uPass').value;
+      if (!u || !p) return showToast('يرجى إدخال اسم المستخدم وكلمة المرور', 'error');
       showLoad(true);
       
-      const {data, error} = await sb.from('app_users').select('*, user_sites(site_id)').eq('username',u).single();
+      const { data, error } = await sb.from('app_users').select('*, user_sites(site_id)').eq('username', u).single();
       const hashedP = await hashPassword(p);
       
-      // الدخول يقبل الباسورد المشفر أو القديم العادي
-      if(error || !data || (data.password !== p && data.password !== hashedP)) {
+      if (error || !data || (data.password !== p && data.password !== hashedP)) {
           showLoad(false);
           showToast('اسم المستخدم أو كلمة المرور غير صحيحة', 'error');
           return;
@@ -1016,14 +1067,16 @@
       
       CUR_USER = data;
       CUR_USER.sites = data.user_sites ? data.user_sites.map(us => us.site_id) : [];
+      saveUserToStorage(CUR_USER);
       
-      document.getElementById('loginScreen').style.display='none';
+      document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('appLayout').classList.remove('hidden');
       document.getElementById('sidebarUser').innerText = data.full_name;
       document.getElementById('sidebarRole').innerText = getRoleName(data.role);
       
       setupPermissions();
-      loadData();
+      await loadData();
+      showLoad(false);
   }
 
   function getRoleName(r) { 
@@ -1055,9 +1108,32 @@
   async function loadData() {
       showLoad(true);
       await Promise.all([loadSites(), loadConts()]);
-      if(CUR_USER.role === 'admin' || CUR_USER.role === 'hr') loadWorkersFull(true);
-      if(CUR_USER.role === 'admin') loadUsers();
+      if (CUR_USER.role === 'admin' || CUR_USER.role === 'hr') { await loadWorkersFull(true); loadWorkersPageGlobalStats(); }
+      if (CUR_USER.role === 'admin') loadUsers();
       showLoad(false);
+  }
+
+  // إحصائيات صفحة الموظفين: إجمالي العاملين / نشط / موقوف
+  async function loadWorkersPageGlobalStats() {
+      if (!CUR_USER) return;
+      try {
+          let totalQ = sb.from('workers').select('*', { count: 'exact', head: true });
+          let activeQ = sb.from('workers').select('*', { count: 'exact', head: true }).eq('is_active', true);
+          let inactiveQ = sb.from('workers').select('*', { count: 'exact', head: true }).eq('is_active', false);
+          if (CUR_USER.role !== 'admin' && CUR_USER.sites && CUR_USER.sites.length > 0) {
+              totalQ = totalQ.in('current_site_id', CUR_USER.sites);
+              activeQ = activeQ.in('current_site_id', CUR_USER.sites);
+              inactiveQ = inactiveQ.in('current_site_id', CUR_USER.sites);
+          }
+          const [totalR, activeR, inactiveR] = await Promise.all([totalQ, activeQ, inactiveQ]);
+          const total = totalR.count ?? 0, active = activeR.count ?? 0, inactive = inactiveR.count ?? 0;
+          const elTotal = document.getElementById('workersTotalCount');
+          const elActive = document.getElementById('workersActiveCount');
+          const elInactive = document.getElementById('workersInactiveCount');
+          if (elTotal) elTotal.innerText = total;
+          if (elActive) elActive.innerText = active;
+          if (elInactive) elInactive.innerText = inactive;
+      } catch (e) { console.warn('خطأ تحميل إحصائيات الموظفين', e); }
   }
 
   // Sites
@@ -1173,7 +1249,7 @@
       document.getElementById('hr-add-view').classList.toggle('hidden', t!='add');
       document.getElementById('hr-list-view').classList.toggle('hidden', t!='list');
       document.querySelectorAll('#v-workers .sub-tab').forEach((e,i)=>e.classList.toggle('active', (t=='list'&&i==0)||(t=='add'&&i==1)));
-      if(t=='list') loadWorkersFull(true);
+      if(t=='list') { loadWorkersFull(true); loadWorkersPageGlobalStats(); }
   }
 
   async function loadWorkersFull(reset = true) {
@@ -1296,6 +1372,7 @@
       document.getElementById('selectAllWorkers').checked = false;
       updateSelectedWorkersCount();
       loadWorkersFull(true);
+      loadWorkersPageGlobalStats();
   }
 
   function renderWorkers() {
@@ -1981,7 +2058,7 @@
       showToast('تم تعديل الحضور');
   }
 
-  // Reports - دعم PDF مع العربية باستخدام pdf-lib
+  // Reports - دعم PDF مع العربية
   function updateReportOptions() {
       const type = document.getElementById('repType').value;
       document.getElementById('repDateRange').style.display = type === 'workers' ? 'none' : 'flex';
@@ -2087,17 +2164,17 @@
       XLSX.writeFile(wb, filename);
   }
 
-  // دوال تصدير PDF مع دعم العربية باستخدام pdf-lib
+  // دوال تصدير PDF مع دعم الخط العربي
   async function exportWorkersPDF(siteId, contId) {
       let query = sb.from('workers').select('*, sites(name), contractors(name)').eq('is_active',true);
       if(siteId) query = query.eq('current_site_id',siteId);
       if(contId) query = query.eq('contractor_id',contId);
       const allData = await fetchAllData(query);
       
-      const headers = ['الاسم', 'رقم الهوية', 'المسمى', 'الراتب', 'نوع الدفع', 'الموقع', 'المقاول'];
+      const headers = [['الاسم', 'رقم الهوية', 'المسمى', 'الراتب', 'نوع الدفع', 'الموقع', 'المقاول']];
       const rows = allData.map(w => [w.name, w.id_number, w.job_title || '', w.basic_salary || '', w.payment_type === 'daily' ? 'يومية' : 'راتب', w.sites?.name || 'غير محدد', w.contractors?.name || '']);
       
-      await generatePDFarabic('تقرير بيانات العمال', headers, rows);
+      await generatePDF('تقرير بيانات العمال', headers, rows);
   }
 
   async function exportAttendancePDF(start, end, siteId) {
@@ -2108,7 +2185,7 @@
       const headers = [['التاريخ', 'رقم الهوية', 'الاسم', 'الموقع', 'الحالة']];
       const rows = allData.map(a => [a.date, a.workers?.id_number, a.workers?.name, a.sites?.name || 'غير محدد', a.status==='present'?'حاضر':a.status==='absent'?'غائب':'نصف يوم']);
       
-      await generatePDFarabic('تقرير سجل الحضور', headers, rows);
+      await generatePDF('تقرير سجل الحضور', headers, rows);
   }
 
   async function exportPayrollPDF(start, end, siteId, contId) {
@@ -2132,7 +2209,7 @@
           return [w.worker.name, w.worker.id_number, w.worker.contractors?.name || '', w.worker.sites?.name || 'غير محدد', w.present, w.absent, w.half, totalDays, dailyRate, amount.toFixed(2)];
       });
       
-      await generatePDFarabic('تقرير مسير الرواتب', headers, rows);
+      await generatePDF('تقرير مسير الرواتب', headers, rows);
   }
 
   async function exportContractorPDF(start, end, siteId, contId) {
@@ -2150,98 +2227,48 @@
       const headers = [['المقاول', 'الموقع', 'عدد العمال', 'عدد الأيام', 'المبلغ']];
       const rows = Object.values(contData).map(c => [c.contractor, c.site, c.workers.size, c.days, (c.days * 100).toFixed(2)]);
       
-      await generatePDFarabic('تقرير مستخلص المقاولين', headers, rows);
+      await generatePDF('تقرير مستخلص المقاولين', headers, rows);
   }
 
-  // دالة PDF جديدة تدعم العربية
-  async function generatePDFarabic(title, headers, rows) {
+  async function generatePDF(title, headers, rows) {
+      if (typeof window.html2canvas !== 'function') {
+          showToast('مكتبة تصدير PDF غير جاهزة. جرب تحديث الصفحة.', 'error');
+          return;
+      }
+      const headRow = Array.isArray(headers[0]) ? headers[0] : headers;
+      const tableRows = rows.map(r => Array.isArray(r) ? r : [r]);
+      const div = document.createElement('div');
+      div.setAttribute('dir', 'rtl');
+      div.style.cssText = 'position:fixed; left:-9999px; top:0; width:1100px; font-family:\'Tajawal\',sans-serif; padding:20px; background:#fff; font-size:12px; direction:rtl;';
+      div.innerHTML = `
+        <h2 style="margin:0 0 15px 0; text-align:center; font-size:18px;">${title}</h2>
+        <table style="width:100%; border-collapse:collapse; text-align:right;">
+          <thead><tr>${headRow.map(h => `<th style="border:1px solid #333; padding:8px; background:#1a1a1a; color:#fff;">${h}</th>`).join('')}</tr></thead>
+          <tbody>${tableRows.map(row => `<tr>${row.map(cell => `<td style="border:1px solid #ddd; padding:6px;">${cell}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>`;
+      document.body.appendChild(div);
       try {
-          const { PDFDocument, rgb, StandardFonts } = PDFLib;
-          
-          // إنشاء مستند PDF جديد
-          const pdfDoc = await PDFDocument.create();
-          
-          // إضافة صفحة
-          let page = pdfDoc.addPage([841.89, 595.28]); // A4 landscape
-          
-          // الحصول على الخط الافتراضي (Helvetica)
-          const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-          
-          // كتابة العنوان
-          page.drawText(title, {
-              x: 50,
-              y: page.getHeight() - 50,
-              size: 18,
-              font: font,
-              color: rgb(0, 0, 0),
-          });
-          
-          // إعداد الجدول يدوياً (بسيط)
-          let y = page.getHeight() - 80;
-          const cellWidth = 80;
-          const cellHeight = 25;
-          
-          // رسم رأس الجدول
-          headers[0].forEach((header, index) => {
-              page.drawText(header, {
-                  x: 50 + (index * cellWidth),
-                  y: y,
-                  size: 10,
-                  font: font,
-                  color: rgb(0, 0, 0),
-              });
-          });
-          
-          y -= cellHeight;
-          
-          // رسم البيانات
-          rows.forEach(row => {
-              row.forEach((cell, index) => {
-                  page.drawText(cell?.toString() || '', {
-                      x: 50 + (index * cellWidth),
-                      y: y,
-                      size: 8,
-                      font: font,
-                      color: rgb(0, 0, 0),
-                  });
-              });
-              y -= cellHeight;
-              
-              // إذا وصلنا لنهاية الصفحة، أضف صفحة جديدة
-              if (y < 50) {
-                  page = pdfDoc.addPage([841.89, 595.28]);
-                  y = page.getHeight() - 50;
-                  
-                  // إعادة رسم الرأس في الصفحة الجديدة
-                  headers[0].forEach((header, index) => {
-                      page.drawText(header, {
-                          x: 50 + (index * cellWidth),
-                          y: y,
-                          size: 10,
-                          font: font,
-                          color: rgb(0, 0, 0),
-                      });
-                  });
-                  y -= cellHeight;
-              }
-          });
-          
-          // حفظ PDF
-          const pdfBytes = await pdfDoc.save();
-          
-          // تحميل الملف
-          const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `${title}.pdf`;
-          link.click();
-          window.URL.revokeObjectURL(url);
-          
+          const canvas = await html2canvas(div, { scale: 2, useCORS: true, logging: false });
+          document.body.removeChild(div);
+          const imgData = canvas.toDataURL('image/png');
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+          const pageW = doc.internal.pageSize.getWidth();
+          const pageH = doc.internal.pageSize.getHeight();
+          const margin = 10;
+          let imgW = pageW - margin * 2;
+          let imgH = (canvas.height * imgW) / canvas.width;
+          if (imgH > pageH - margin * 2) {
+              imgH = pageH - margin * 2;
+              imgW = (canvas.width * imgH) / canvas.height;
+          }
+          doc.addImage(imgData, 'PNG', margin, margin, imgW, imgH);
+          doc.save(`${title}.pdf`);
           showToast('تم إنشاء ملف PDF بنجاح');
-      } catch (error) {
-          console.error('خطأ في إنشاء PDF:', error);
-          showToast('حدث خطأ في إنشاء ملف PDF', 'error');
+      } catch (err) {
+          document.body.removeChild(div);
+          console.error(err);
+          showToast('حدث خطأ في إنشاء PDF: ' + (err.message || ''), 'error');
       }
   }
 
@@ -2569,6 +2596,8 @@
               txt.className = this.checked ? 'badge bg-green' : 'badge bg-gray';
           };
       }
+      if (loadUserFromStorage()) return;
+      document.getElementById('loginScreen').style.display = 'flex';
   };
 </script>
 </body>
