@@ -1043,10 +1043,11 @@
       return allData;
   }
 
-  // حفظ الجلسة في localStorage (بدون كلمة مرور - لأمان أفضل)
+  // حفظ الجلسة في sessionStorage: تُمسح عند إغلاق التبويب (أنسب للأجهزة المشتركة)
   function saveUserToStorage(user) {
       try {
-          localStorage.setItem('hr_user', JSON.stringify({
+          localStorage.removeItem('hr_user');
+          sessionStorage.setItem('hr_user', JSON.stringify({
               id: user.id,
               full_name: user.full_name,
               role: user.role,
@@ -1057,7 +1058,14 @@
 
   function loadUserFromStorage() {
       try {
-          const saved = localStorage.getItem('hr_user');
+          let saved = sessionStorage.getItem('hr_user');
+          if (!saved) {
+              saved = localStorage.getItem('hr_user');
+              if (saved) {
+                  sessionStorage.setItem('hr_user', saved);
+                  localStorage.removeItem('hr_user');
+              }
+          }
           if (!saved) return false;
           const user = JSON.parse(saved);
           if (!user || !user.id) return false;
@@ -1076,6 +1084,7 @@
 
   function logout() {
       localStorage.removeItem('hr_user');
+      sessionStorage.removeItem('hr_user');
       location.reload();
   }
 
@@ -1088,8 +1097,9 @@
       
       const { data, error } = await sb.from('app_users').select('*, user_sites(site_id)').eq('username', u).single();
       const hashedP = await hashPassword(p);
-      
-      if (error || !data || (data.password !== p && data.password !== hashedP)) {
+      const stored = data && data.password != null ? String(data.password) : '';
+      const passwordOk = data && stored === hashedP;
+      if (error || !passwordOk) {
           showLoad(false);
           showToast('اسم المستخدم أو كلمة المرور غير صحيحة', 'error');
           return;
