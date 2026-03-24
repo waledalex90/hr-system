@@ -1107,6 +1107,7 @@
       
       CUR_USER = data;
       CUR_USER.sites = data.user_sites ? data.user_sites.map(us => us.site_id) : [];
+      delete CUR_USER.password;
       saveUserToStorage(CUR_USER);
       
       document.getElementById('loginScreen').style.display = 'none';
