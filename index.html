@@ -1095,7 +1095,11 @@
       if (!u || !p) return showToast('يرجى إدخال اسم المستخدم وكلمة المرور', 'error');
       showLoad(true);
       
-      const { data, error } = await sb.from('app_users').select('*, user_sites(site_id)').eq('username', u).single();
+      const { data, error } = await sb
+          .from('app_users')
+          .select('id, password, full_name, role, user_sites(site_id)')
+          .eq('username', u)
+          .single();
       const hashedP = await hashPassword(p);
       const stored = data && data.password != null ? String(data.password) : '';
       const passwordOk = data && stored === hashedP;
@@ -1109,6 +1113,7 @@
       CUR_USER.sites = data.user_sites ? data.user_sites.map(us => us.site_id) : [];
       delete CUR_USER.password;
       saveUserToStorage(CUR_USER);
+      document.getElementById('uPass').value = '';
       
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('appLayout').classList.remove('hidden');
