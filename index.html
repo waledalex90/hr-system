@@ -360,7 +360,7 @@
     </div>
     <div class="grid-2">
         <div><label class="input-label-secondary">الاسم الكامل</label><input type="text" id="editWName"></div>
-        <div><label class="input-label-secondary">رقم الهوية</label><input type="text" id="editWIqama" readonly style="background:#eee; color:#777;"></div>
+        <div><label class="input-label-secondary">رقم الهوية / الإقامة / الجواز</label><input type="text" id="editWIqama" readonly style="background:#eee; color:#777;"></div>
     </div>
     <div class="grid-2">
         <div><label class="input-label-secondary">المقاول</label><select id="editWCont"></select></div>
@@ -480,7 +480,6 @@
     <button onclick="nav('corrections')" id="n-corrections" class="nav-btn hidden"><i class="fa-solid fa-pen-to-square"></i> طلبات التعديل</button>
     <button onclick="nav('users')" id="n-users" class="nav-btn hidden"><i class="fa-solid fa-user-shield"></i> المستخدمين</button>
     <button onclick="nav('roles')" id="n-roles" class="nav-btn hidden"><i class="fa-solid fa-key"></i> الأدوار والصلاحيات</button>
-    <button onclick="nav('audit')" id="n-audit" class="nav-btn hidden"><i class="fa-solid fa-clipboard-list"></i> سجل الأحداث</button>
     
     <div style="flex:1;"></div>
     <button onclick="logout()" class="nav-btn" style="color:#ff6b6b;"><i class="fa-solid fa-arrow-right-from-bracket"></i> تسجيل خروج</button>
@@ -643,7 +642,7 @@
              
              <div style="background:var(--bg-main); padding:20px; border-radius:12px; margin-bottom:25px; border:2px dashed var(--border-color); text-align:center;">
                  <h4 style="margin:0 0 10px 0;">📤 استيراد من Excel</h4>
-                 <p style="color:var(--text-light); font-size:0.9rem; margin-bottom:15px;">الأعمدة: الاسم الرباعي | رقم الهوية | المسمى | الراتب | نوع الدفع | الموقع | المشرف | المقاول | تاريخ انتهاء الإقامة</p>
+                 <p style="color:var(--text-light); font-size:0.9rem; margin-bottom:15px;">الأعمدة: الاسم الرباعي | رقم الهوية/الإقامة/الجواز (بدون تكرار) | المسمى | الراتب | نوع الدفع | الموقع | المشرف | المقاول | تاريخ انتهاء الإقامة</p>
                  <div class="flex-row" style="justify-content:center;">
                      <button onclick="document.getElementById('excelFile').click()" class="btn btn-sm btn-gold" style="width:auto;"><i class="fa-solid fa-upload"></i> رفع الملف</button>
                      <button onclick="downloadTemplate()" class="btn btn-sm btn-outline" style="width:auto;"><i class="fa-solid fa-download"></i> تحميل النموذج</button>
@@ -654,7 +653,7 @@
              <h4>أو التسجيل اليدوي:</h4>
              <div class="grid-2">
                  <div><label class="input-label-secondary">الاسم الرباعي</label><input type="text" id="newWName"></div>
-                 <div><label class="input-label-secondary">رقم الهوية/الإقامة</label><input type="text" id="newWIqama"></div>
+                 <div><label class="input-label-secondary">رقم الهوية / الإقامة / الجواز</label><input type="text" id="newWIqama" placeholder="لا يُقبل تكرار نفس الرقم لموظفين"></div>
              </div>
              <div class="grid-3">
                  <div><label class="input-label-secondary">المقاول التابع له</label><select id="newWCont"><option value="">اختر...</option></select></div>
@@ -675,7 +674,7 @@
        <div class="card">
           <h3>إضافة موقع جديد</h3>
           <div class="flex-row">
-             <div style="flex:1"><label class="input-label-secondary">اسم الموقع</label><input type="text" id="nSite" style="margin:0;"></div>
+             <div style="flex:1"><label class="input-label-secondary">اسم الموقع</label><input type="text" id="nSite" style="margin:0;" placeholder="بدون تكرار (يُمنع اسم مطابق لموقع قائم)"></div>
              <div style="flex:1"><label class="input-label-secondary">المقاول الرئيسي</label><select id="nSiteCont" style="margin:0;"><option value="">اختر...</option></select></div>
              <button onclick="addSite()" class="btn btn-gold" style="width:auto; align-self:flex-end; padding:12px 25px;">إضافة</button>
           </div>
@@ -704,6 +703,20 @@
           <div class="grid-3" style="margin-bottom:20px;">
               <div><label class="input-label-secondary">التاريخ</label><input type="date" id="attDate" onchange="loadAttendanceRegister()"></div>
               <div><label class="input-label-secondary">الموقع</label><select id="attSite" onchange="loadAttendanceRegister()"></select></div>
+          </div>
+
+          <div id="attendanceExcelUploadCard" class="card hidden" style="margin-bottom:20px; background:var(--bg-main); border:2px dashed var(--border-color);">
+              <h4 style="margin:0 0 10px 0;"><i class="fa-solid fa-file-excel"></i> رفع تحضير من Excel <small style="color:var(--text-light); font-weight:normal;">(مدير النظام فقط)</small></h4>
+              <p style="color:var(--text-light); font-size:0.88rem; line-height:1.6; margin-bottom:12px;">
+                  <b>الأعمدة (بالترتيب):</b> ① رقم الإقامة أو الهوية &nbsp;② التاريخ بصيغة <code>YYYY-MM-DD</code> أو <code>DD/MM/YYYY</code> &nbsp;③ الحالة: <code>حاضر</code> / <code>غائب</code> / <code>نصف يوم</code> (أو present / absent / half)
+                  &nbsp;④ <b>اختياري:</b> اسم الموقع (إن تركتَه فارغاً يُستخدم الموقع المختار أعلاه إن وُجد).
+                  <br>يُحفظ فقط الصف الصحيح؛ الصفوف ذات المشكلة تُنزَّل في ملف منفصل مع <b>سبب المشكلة</b>.
+              </p>
+              <div class="flex-row" style="gap:10px; flex-wrap:wrap;">
+                  <button type="button" onclick="document.getElementById('attendanceSheetFile').click()" class="btn btn-sm btn-gold" style="width:auto;"><i class="fa-solid fa-upload"></i> اختيار الشيت</button>
+                  <button type="button" onclick="downloadAttendanceUploadTemplate()" class="btn btn-sm btn-outline" style="width:auto;"><i class="fa-solid fa-download"></i> تحميل نموذج</button>
+              </div>
+              <input type="file" id="attendanceSheetFile" accept=".xlsx,.xls" style="display:none" onchange="handleAttendanceSheetUpload(this)">
           </div>
           
           <div class="counter-bar" id="attCounterBar">
@@ -889,30 +902,6 @@
        </div>
     </div>
 
-    <div id="v-audit" class="view-section hidden">
-       <div class="card">
-           <h3 style="margin-top:0;"><i class="fa-solid fa-clipboard-list"></i> سجل الأحداث</h3>
-           <div class="grid-3" style="margin-bottom:20px;">
-               <div><label class="input-label-secondary">نوع العملية</label>
-                   <select id="auditActionFilter">
-                       <option value="">الكل</option>
-                       <option value="insert">إضافة</option>
-                       <option value="update">تعديل</option>
-                       <option value="soft_delete">إخفاء (حذف منطقي)</option>
-                       <option value="restore">استعادة</option>
-                   </select>
-               </div>
-               <div><label class="input-label-secondary">من تاريخ</label><input type="date" id="auditFrom"></div>
-               <div><label class="input-label-secondary">إلى تاريخ</label><input type="date" id="auditTo"></div>
-           </div>
-           <div class="flex-row" style="gap:12px; flex-wrap:wrap;">
-               <button type="button" onclick="loadAuditLogs()" class="btn btn-gold btn-sm" style="width:auto;"><i class="fa-solid fa-search"></i> عرض</button>
-               <button type="button" onclick="exportAuditLogs()" class="btn btn-outline btn-sm" style="width:auto;"><i class="fa-solid fa-file-excel"></i> تصدير Excel</button>
-           </div>
-           <div id="auditLogsList" style="margin-top:20px;"></div>
-       </div>
-    </div>
-
   </div>
 </div>
 
@@ -920,8 +909,21 @@
   // Supabase
   const UP_URL = 'https://aouflbxavabmochmmigg.supabase.co';
   const UP_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdWZsYnhhdmFibW9jaG1taWdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyNzEwNzcsImV4cCI6MjA4NDg0NzA3N30.7JxbYBTcdxHILfI0uThuE3zxJLQXG8peSQKEX3d35e4';
-  const sb = window.supabase.createClient(UP_URL, UP_KEY);
+  const sb = window.supabase.createClient(UP_URL, UP_KEY, {
+      auth: {
+          storage: sessionStorage,
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+      }
+  });
 
+  const AUTH_EMAIL_DOMAIN = 'hr-system.invalid';
+  function authEmailFromUsername(username) {
+      const t = String(username || '').trim().toLowerCase();
+      const safe = t.replace(/[^a-z0-9._+-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || 'user';
+      return safe + '@' + AUTH_EMAIL_DOMAIN;
+  }
   let CUR_USER = null, ALL_WORKERS = [], SITES_CACHE = [], CONTS_CACHE = [], USERS_CACHE = [];
   let WORKERS_PAGE = 0;
   const WORKERS_PER_PAGE = 100;
@@ -973,9 +975,101 @@
       setTimeout(() => toast.remove(), 3000);
   }
 
+  function normalizeSiteName(s) {
+      return String(s || '').trim().replace(/\s+/g, ' ');
+  }
+  /** معرفات المواقع المسموح بها للمستخدم الحالي (أرقام موحّدة — تفادي اختلاف string/number من الجلسة) */
+  function userAllowedSiteIds() {
+      const arr = CUR_USER && CUR_USER.sites ? CUR_USER.sites : [];
+      return arr.map(function (x) { return parseInt(String(x), 10); }).filter(function (n) { return !isNaN(n); });
+  }
+  function isSiteAllowedForCurrentUser(siteVal) {
+      if (!CUR_USER || CUR_USER.role === 'admin') return true;
+      const sid = parseInt(String(siteVal), 10);
+      if (isNaN(sid)) return false;
+      return userAllowedSiteIds().indexOf(sid) !== -1;
+  }
+  function refreshAttendanceExcelUploadUI() {
+      const card = document.getElementById('attendanceExcelUploadCard');
+      if (!card || !CUR_USER) return;
+      if (CUR_USER.role === 'admin') card.classList.remove('hidden');
+      else card.classList.add('hidden');
+  }
+  function isDuplicateSiteName(name, excludeSiteId) {
+      const n = normalizeSiteName(name).toLowerCase();
+      if (!n) return false;
+      return (SITES_CACHE || []).some(function (site) {
+          if (excludeSiteId != null && String(site.id) === String(excludeSiteId)) return false;
+          return normalizeSiteName(site.name).toLowerCase() === n;
+      });
+  }
+  /** توحيد رقم الهوية/الإقامة/الجواز للمقارنة (مسافات، أرقام عربية، حالة الأحرف) */
+  function normalizeIdentityKey(input) {
+      if (input == null || input === '') return '';
+      let s = String(input).trim().replace(/\s+/g, '').normalize('NFKC');
+      const arabic = '٠١٢٣٤٥٦٧٨٩';
+      const latin = '0123456789';
+      s = s.split('').map(function (ch) {
+          const i = arabic.indexOf(ch);
+          return i >= 0 ? latin[i] : ch;
+      }).join('');
+      return s.toUpperCase();
+  }
+  async function findWorkerConflictingIdentity(raw, excludeWorkerId) {
+      const target = normalizeIdentityKey(raw);
+      if (!target) return { row: null, error: null };
+      const chunk = 500;
+      let from = 0;
+      while (true) {
+          const res = await sb.from('workers').select('id, id_number, is_deleted').range(from, from + chunk - 1).order('id');
+          if (res.error) return { row: null, error: res.error };
+          const data = res.data || [];
+          for (let j = 0; j < data.length; j++) {
+              const w = data[j];
+              if (excludeWorkerId != null && String(w.id) === String(excludeWorkerId)) continue;
+              if (normalizeIdentityKey(w.id_number) === target) return { row: w, error: null };
+          }
+          if (data.length < chunk) break;
+          from += chunk;
+      }
+      return { row: null, error: null };
+  }
+  async function buildWorkersIdentityMap() {
+      const map = Object.create(null);
+      const chunk = 500;
+      let from = 0;
+      while (true) {
+          const res = await sb.from('workers').select('id, id_number, is_deleted').range(from, from + chunk - 1).order('id');
+          if (res.error) return { map: null, error: res.error };
+          const data = res.data || [];
+          for (let j = 0; j < data.length; j++) {
+              const w = data[j];
+              const k = normalizeIdentityKey(w.id_number);
+              if (k) map[k] = w;
+          }
+          if (data.length < chunk) break;
+          from += chunk;
+      }
+      return { map, error: null };
+  }
+
   function showLoad(s, text='جاري التحميل...') {
-      document.getElementById('loaderOverlay').style.display = s ? 'flex' : 'none';
-      document.getElementById('loaderText').innerText = text;
+      var ov = document.getElementById('loaderOverlay');
+      var tx = document.getElementById('loaderText');
+      if (ov) ov.style.display = s ? 'flex' : 'none';
+      if (tx) tx.innerText = text;
+  }
+
+  /** يمنع تعليق الواجهة إذا لم يُكمل Supabase/الشبكة الطلب */
+  function withTimeout(promise, ms, errMessage) {
+      return Promise.race([
+          Promise.resolve(promise),
+          new Promise(function (_, reject) {
+              setTimeout(function () {
+                  reject(new Error(errMessage || 'انتهت المهلة'));
+              }, ms);
+          })
+      ]);
   }
   
   function showProgress(percent, text) {
@@ -1004,7 +1098,6 @@
       if(v === 'approval') { initApprovalFilters(); loadPendingApproval(); }
       if(v === 'corrections') loadCorrections();
       if(v === 'roles') loadRoles();
-      if(v === 'audit') loadAuditLogs();
   }
 
   // حفظ/استعادة فلاتر الموظفين في LocalStorage
@@ -1049,6 +1142,7 @@
           localStorage.removeItem('hr_user');
           sessionStorage.setItem('hr_user', JSON.stringify({
               id: user.id,
+              username: user.username,
               full_name: user.full_name,
               role: user.role,
               sites: user.sites || []
@@ -1056,7 +1150,91 @@
       } catch (e) { console.warn('تعذر حفظ الجلسة', e); }
   }
 
-  function loadUserFromStorage() {
+  async function applyCurUserFromProfile(profile) {
+      if (!profile) return false;
+      CUR_USER = {
+          id: profile.id,
+          username: profile.username,
+          full_name: profile.full_name,
+          role: profile.role
+      };
+      CUR_USER.sites = [];
+      try {
+          const us = profile.user_sites;
+          if (us != null && Array.isArray(us)) {
+              CUR_USER.sites = us
+                  .map(function (row) {
+                      if (row == null || typeof row !== 'object') return NaN;
+                      return parseInt(String(row.site_id), 10);
+                  })
+                  .filter(function (n) { return !isNaN(n); });
+          }
+      } catch (e) {
+          console.warn('user_sites', e);
+          CUR_USER.sites = [];
+      }
+      saveUserToStorage(CUR_USER);
+      var loginScr = document.getElementById('loginScreen');
+      var appLay = document.getElementById('appLayout');
+      if (loginScr) loginScr.style.display = 'none';
+      if (appLay) appLay.classList.remove('hidden');
+      var su = document.getElementById('sidebarUser');
+      var sr = document.getElementById('sidebarRole');
+      if (su) su.innerText = profile.full_name;
+      if (sr) sr.innerText = getRoleName(profile.role);
+      setupPermissions();
+      await loadData();
+      return true;
+  }
+
+  async function tryRestoreAuthSession() {
+      try {
+          var sessionRes = await withTimeout(sb.auth.getSession(), 15000, 'مهلة التحقق من الجلسة');
+          var session = sessionRes && sessionRes.data && sessionRes.data.session;
+          if (!session) return false;
+          showLoad(true, 'جاري استعادة الجلسة...');
+          try {
+              var profRes = await withTimeout(
+                  sb
+                      .from('app_users')
+                      .select('id, username, full_name, role, user_sites(site_id), auth_user_id')
+                      .eq('auth_user_id', session.user.id)
+                      .maybeSingle(),
+                  25000,
+                  'مهلة جلب بيانات المستخدم'
+              );
+              var profile = profRes && profRes.data;
+              var perr = profRes && profRes.error;
+              if (perr || !profile) {
+                  await sb.auth.signOut();
+                  return false;
+              }
+              try {
+                  await withTimeout(applyCurUserFromProfile(profile), 120000, 'مهلة تحميل التطبيق');
+              } catch (applyErr) {
+                  console.error(applyErr);
+                  showToast(
+                      'تعذر إكمال الدخول التلقائي. جرّب تسجيل الدخول يدوياً؛ أو شغّل الملف من خادم محلي (http://localhost) وليس file://',
+                      'error'
+                  );
+                  await sb.auth.signOut();
+                  return false;
+              }
+              return true;
+          } finally {
+              showLoad(false);
+          }
+      } catch (e) {
+          console.warn('tryRestoreAuthSession', e);
+          showLoad(false);
+          try {
+              await sb.auth.signOut();
+          } catch (_) {}
+          return false;
+      }
+  }
+
+  async function tryRestoreLegacyFromStorage() {
       try {
           let saved = sessionStorage.getItem('hr_user');
           if (!saved) {
@@ -1069,60 +1247,145 @@
           if (!saved) return false;
           const user = JSON.parse(saved);
           if (!user || !user.id) return false;
-          // استرجاع بيانات المستخدم الكاملة من السيرفر للتأكد من الصلاحيات
           showLoad(true, 'جاري استعادة الجلسة...');
-          CUR_USER = user;
-          document.getElementById('loginScreen').style.display = 'none';
-          document.getElementById('appLayout').classList.remove('hidden');
-          document.getElementById('sidebarUser').innerText = user.full_name;
-          document.getElementById('sidebarRole').innerText = getRoleName(user.role);
-          setupPermissions();
-          loadData().then(() => showLoad(false));
-          return true;
-      } catch (e) { return false; }
+          try {
+              var rowRes = await withTimeout(
+                  sb
+                      .from('app_users')
+                      .select('id, username, full_name, role, user_sites(site_id), auth_user_id')
+                      .eq('id', user.id)
+                      .single(),
+                  25000,
+                  'مهلة جلب بيانات المستخدم'
+              );
+              var row = rowRes && rowRes.data;
+              var rerr = rowRes && rowRes.error;
+              if (rerr || !row) return false;
+              try {
+                  await withTimeout(applyCurUserFromProfile(row), 120000, 'مهلة تحميل التطبيق');
+              } catch (applyErr) {
+                  console.error(applyErr);
+                  showToast(
+                      'تعذر إكمال الدخول التلقائي. جرّب تسجيل الدخول يدوياً؛ أو افتح الصفحة عبر http://localhost بدل file://',
+                      'error'
+                  );
+                  return false;
+              }
+              return true;
+          } finally {
+              showLoad(false);
+          }
+      } catch (e) {
+          console.warn('tryRestoreLegacyFromStorage', e);
+          showLoad(false);
+          return false;
+      }
   }
 
-  function logout() {
+  function loadUserFromStorage() {
+      return false;
+  }
+
+  async function logout() {
+      await sb.auth.signOut();
       localStorage.removeItem('hr_user');
       sessionStorage.removeItem('hr_user');
       location.reload();
   }
 
-  // Login
   async function login() {
       const u = (document.getElementById('uName').value || '').trim();
       const p = document.getElementById('uPass').value;
       if (!u || !p) return showToast('يرجى إدخال اسم المستخدم وكلمة المرور', 'error');
       showLoad(true);
-      
-      const { data, error } = await sb
-          .from('app_users')
-          .select('id, password, full_name, role, user_sites(site_id)')
-          .eq('username', u)
-          .single();
+      const email = authEmailFromUsername(u);
+      let signRes;
+      try {
+          signRes = await withTimeout(
+              sb.auth.signInWithPassword({ email: email, password: p }),
+              30000,
+              'مهلة الاتصال بتسجيل الدخول'
+          );
+      } catch (e) {
+          showLoad(false);
+          return showToast('انتهت مهلة الاتصال — تحقق من الشبكة أو افتح الصفحة عبر http://localhost بدل file://', 'error');
+      }
+      const authData = signRes && signRes.data;
+      const authErr = signRes && signRes.error;
+      if (!authErr && authData && authData.user) {
+          let profRes;
+          try {
+              profRes = await withTimeout(
+                  sb
+                      .from('app_users')
+                      .select('id, username, full_name, role, user_sites(site_id), auth_user_id')
+                      .eq('auth_user_id', authData.user.id)
+                      .maybeSingle(),
+                  25000,
+                  'مهلة جلب بيانات المستخدم'
+              );
+          } catch (e) {
+              await sb.auth.signOut();
+              showLoad(false);
+              return showToast('انتهت مهلة الاتصال — أعد المحاولة', 'error');
+          }
+          const profile = profRes && profRes.data;
+          const profErr = profRes && profRes.error;
+          if (!profErr && profile) {
+              document.getElementById('uPass').value = '';
+              try {
+                  await withTimeout(applyCurUserFromProfile(profile), 120000, 'مهلة تحميل التطبيق');
+              } catch (e) {
+                  console.error('applyCurUserFromProfile', e);
+                  showToast('خطأ أثناء فتح التطبيق — تحقق من البيانات والصلاحيات', 'error');
+                  await sb.auth.signOut();
+              } finally {
+                  showLoad(false);
+              }
+              return;
+          }
+          await sb.auth.signOut();
+      }
       const hashedP = await hashPassword(p);
-      const stored = data && data.password != null ? String(data.password) : '';
-      const passwordOk = data && stored === hashedP;
-      if (error || !passwordOk) {
+      let rowRes;
+      try {
+          rowRes = await withTimeout(
+              sb
+                  .from('app_users')
+                  .select('id, username, password, full_name, role, user_sites(site_id)')
+                  .eq('username', u)
+                  .maybeSingle(),
+              25000,
+              'مهلة جلب بيانات المستخدم'
+          );
+      } catch (e) {
+          showLoad(false);
+          return showToast('انتهت مهلة الاتصال — أعد المحاولة', 'error');
+      }
+      const row = rowRes && rowRes.data;
+      const legErr = rowRes && rowRes.error;
+      const stored = row && row.password != null ? String(row.password) : '';
+      if (legErr || !row || stored !== hashedP) {
           showLoad(false);
           showToast('اسم المستخدم أو كلمة المرور غير صحيحة', 'error');
           return;
       }
-      
-      CUR_USER = data;
-      CUR_USER.sites = data.user_sites ? data.user_sites.map(us => us.site_id) : [];
-      delete CUR_USER.password;
-      saveUserToStorage(CUR_USER);
+      const profile = {
+          id: row.id,
+          username: row.username,
+          full_name: row.full_name,
+          role: row.role,
+          user_sites: row.user_sites
+      };
       document.getElementById('uPass').value = '';
-      
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('appLayout').classList.remove('hidden');
-      document.getElementById('sidebarUser').innerText = data.full_name;
-      document.getElementById('sidebarRole').innerText = getRoleName(data.role);
-      
-      setupPermissions();
-      await loadData();
-      showLoad(false);
+      try {
+          await withTimeout(applyCurUserFromProfile(profile), 120000, 'مهلة تحميل التطبيق');
+      } catch (e) {
+          console.error('applyCurUserFromProfile', e);
+          showToast('خطأ أثناء فتح التطبيق — تحقق من البيانات والصلاحيات', 'error');
+      } finally {
+          showLoad(false);
+      }
   }
 
   function getRoleName(r) { 
@@ -1131,10 +1394,10 @@
   }
 
   function setupPermissions() {
-      if (typeof injectAuditUI === 'function') injectAuditUI();
+      injectShowDeletedWorkersCheckbox();
       const r = CUR_USER.role;
       if(r === 'admin') {
-          ['dashboard','workers','sites','contractors','attendance','approval','reports','corrections','users','roles','audit'].forEach(id => {
+          ['dashboard','workers','sites','contractors','attendance','approval','reports','corrections','users','roles'].forEach(id => {
               document.getElementById('n-'+id)?.classList.remove('hidden');
           });
           nav('dashboard');
@@ -1150,14 +1413,22 @@
           document.getElementById('n-approval')?.classList.remove('hidden');
           nav('approval');
       }
+      refreshAttendanceExcelUploadUI();
   }
 
   async function loadData() {
       showLoad(true);
-      await Promise.all([loadSites(), loadConts()]);
-      if (CUR_USER.role === 'admin' || CUR_USER.role === 'hr') { await loadWorkersFull(true); loadWorkersPageGlobalStats(); }
-      if (CUR_USER.role === 'admin') loadUsers();
-      showLoad(false);
+      try {
+          await withTimeout(Promise.all([loadSites(), loadConts()]), 45000, 'مهلة تحميل المواقع والمقاولين');
+          if (CUR_USER.role === 'admin' || CUR_USER.role === 'hr') { await loadWorkersFull(true); loadWorkersPageGlobalStats(); }
+          if (CUR_USER.role === 'admin') loadUsers();
+      } catch (e) {
+          console.error('loadData', e);
+          var hint = e && e.message ? ' (' + e.message + ')' : '';
+          showToast('تعذر تحميل بعض البيانات — تحقق من الاتصال وصلاحيات Supabase' + hint, 'error');
+      } finally {
+          showLoad(false);
+      }
   }
 
   // إحصائيات صفحة الموظفين: إجمالي العاملين / نشط / موقوف
@@ -1193,8 +1464,10 @@
           const el = document.getElementById(id);
           if(el) el.innerHTML = id.includes('filt') || id.includes('rep') || id.includes('app') || id.includes('review') || id.includes('att') ? allOpts : opts;
       });
-      const userSites = CUR_USER.role === 'admin' ? SITES_CACHE : SITES_CACHE.filter(s => CUR_USER.sites.includes(s.id));
-      document.getElementById('sitesList').innerHTML = userSites.map(s=>`
+      const allowedLs = userAllowedSiteIds();
+      const userSites = CUR_USER.role === 'admin' ? SITES_CACHE : SITES_CACHE.filter(function (s) { return allowedLs.indexOf(Number(s.id)) !== -1; });
+      const sitesListEl = document.getElementById('sitesList');
+      if (sitesListEl) sitesListEl.innerHTML = userSites.map(s=>`
         <div class="card ${s.is_active===false?'inactive-card':''}" style="display:flex; justify-content:space-between; align-items:center; padding:15px;">
             <div><b style="font-size:1.1rem;">${s.name}</b><br><small style="color:var(--text-light)">المقاول: ${s.contractors?.name||'-'}</small></div>
             <div class="flex-row">
@@ -1210,12 +1483,20 @@
   async function addSite() {
       if(!checkPermission('sites')) return;
       const n=document.getElementById('nSite').value, c=document.getElementById('nSiteCont').value;
-      if(!n) return showToast('يرجى إدخال اسم الموقع', 'error');
+      const nameNorm = normalizeSiteName(n);
+      if(!nameNorm) return showToast('يرجى إدخال اسم الموقع', 'error');
+      if (isDuplicateSiteName(nameNorm)) return showToast('اسم الموقع موجود مسبقاً — لا يُقبل التكرار', 'error');
       showLoad(true);
-      await sb.from('sites').insert({name:n, main_contractor_id:c||null, is_active:true});
+      const { error } = await sb.from('sites').insert({name:nameNorm, main_contractor_id:c||null, is_active:true});
       document.getElementById('nSite').value='';
       await loadSites();
       showLoad(false);
+      if (error) {
+          const em = (error.message || '') + (error.details || '');
+          if (error.code === '23505' || /duplicate|unique/i.test(em))
+              return showToast('اسم الموقع مكرر في قاعدة البيانات', 'error');
+          return showToast('تعذر إضافة الموقع', 'error');
+      }
       showToast('تم إضافة الموقع بنجاح');
   }
 
@@ -1248,7 +1529,8 @@
           const el = document.getElementById(id);
           if(el) el.innerHTML = id.includes('filt') || id.includes('rep') ? allOpts : opts;
       });
-      document.getElementById('contsList').innerHTML = CONTS_CACHE.map(c=>`
+      const contsListEl = document.getElementById('contsList');
+      if (contsListEl) contsListEl.innerHTML = CONTS_CACHE.map(c=>`
         <div class="card ${c.is_active===false?'inactive-card':''}" style="display:flex; justify-content:space-between; align-items:center; padding:15px;">
             <b>${c.name}</b>
             <div class="flex-row">
@@ -1528,41 +1810,6 @@
       showToast(active ? 'تم تفعيل الموظف' : 'تم إيقاف الموظف');
   }
 
-  async function addWorker() {
-      if(!checkPermission('workers')) return;
-      const idNum = document.getElementById('newWIqama').value.trim();
-      const expiry = document.getElementById('newWIqamaExpiry').value || null;
-      const d = {
-          id_number: idNum,
-          name: document.getElementById('newWName').value,
-          contractor_id: document.getElementById('newWCont').value || null,
-          current_site_id: document.getElementById('newWSite').value || null,
-          assigned_supervisor_id: document.getElementById('newWSuper').value || null,
-          payment_type: document.getElementById('newWType').value,
-          basic_salary: document.getElementById('newWAmt').value,
-          iqama_expiry: expiry,
-          is_active: true
-      };
-      
-      if(!d.name || !d.id_number) return showToast('يرجى إدخال الاسم ورقم الهوية', 'error');
-      
-      const {data:existing} = await sb.from('workers').select('id').eq('id_number',idNum).single();
-      if(existing) return showToast('رقم الهوية مسجل مسبقاً!', 'error');
-      
-      showLoad(true);
-      const {error} = await sb.from('workers').insert(d);
-      showLoad(false);
-      
-      if(error) return showToast('خطأ في الحفظ', 'error');
-      
-      showToast('تم حفظ الموظف بنجاح');
-      document.getElementById('newWIqama').value='';
-      document.getElementById('newWName').value='';
-      document.getElementById('newWIqamaExpiry').value='';
-      loadWorkersFull(true);
-      switchTab('list');
-  }
-
   function openEditW(id) {
       const w = ALL_WORKERS.find(x=>x.id==id);
       document.getElementById('editWId').value=w.id;
@@ -1582,82 +1829,11 @@
       document.getElementById('editWorkerModal').classList.add('open');
   }
 
-  async function saveWorkerEdit() {
-      if(!checkPermission('workers')) return;
-      const id = document.getElementById('editWId').value;
-      showLoad(true);
-      const {error} = await sb.from('workers').update({
-          name: document.getElementById('editWName').value,
-          contractor_id: document.getElementById('editWCont').value || null,
-          current_site_id: document.getElementById('editWSite').value || null,
-          assigned_supervisor_id: document.getElementById('editWSuper').value || null,
-          payment_type: document.getElementById('editWType').value,
-          basic_salary: document.getElementById('editWAmt').value,
-          iqama_expiry: document.getElementById('editWIqamaExpiry').value || null,
-          is_active: document.getElementById('editWActive').checked
-      }).eq('id',id);
-      showLoad(false);
-      if(error) return showToast('حدث خطأ', 'error');
-      closeModal('editWorkerModal');
-      loadWorkersFull(true);
-      showToast('تم حفظ التغييرات');
-  }
-
-  async function delWorker(id) {
-      if(CUR_USER.role !== 'admin') return showToast('صلاحية الحذف للمدير فقط', 'error');
-      if(!confirm('تحذير: سيتم حذف العامل نهائياً. هل أنت متأكد؟')) return;
-      showLoad(true);
-      await sb.from('workers').delete().eq('id',id);
-      loadWorkersFull(true);
-      showLoad(false);
-      showToast('تم حذف الموظف');
-  }
-
   function downloadTemplate() {
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([["الاسم الرباعي","رقم الهوية","المسمى الوظيفي","الراتب الأساسي","نوع الدفع (راتب/يومية)","اسم الموقع","اسم المشرف","اسم المقاول","تاريخ انتهاء الإقامة"]]);
+    const ws = XLSX.utils.aoa_to_sheet([["الاسم الرباعي","رقم الهوية أو الإقامة أو الجواز (فريد)","المسمى الوظيفي","الراتب الأساسي","نوع الدفع (راتب/يومية)","اسم الموقع","اسم المشرف","اسم المقاول","تاريخ انتهاء الإقامة"]]);
     XLSX.utils.book_append_sheet(wb, ws, "نموذج البيانات");
     XLSX.writeFile(wb, "نموذج_استيراد_العمال.xlsx");
-  }
-
-  async function handleExcelUpload(input) {
-      if(!checkPermission('workers')) return;
-      const file = input.files[0];
-      if(!file) return;
-      if(!confirm('سيتم استيراد البيانات. هل تريد المتابعة؟')) { input.value=''; return; }
-      
-      showLoad(true);
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-          try {
-              const data = new Uint8Array(e.target.result);
-              const wb = XLSX.read(data, {type:'array'});
-              const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
-              let count=0, errors=[];
-              for(let i=1; i<rows.length; i++) {
-                  if(!rows[i][0] || !rows[i][1]) continue;
-                  const site = SITES_CACHE.find(s => s.name === rows[i][5]);
-                  const cont = CONTS_CACHE.find(c => c.name === rows[i][7]);
-                  const {data:supervisor} = await sb.from('app_users').select('id').eq('full_name',rows[i][6]).eq('role','supervisor').single();
-                  const {data:existing} = await sb.from('workers').select('id').eq('id_number',String(rows[i][1])).single();
-                  if(existing) { errors.push(`الصف ${i+1}: ${rows[i][1]} مسجل`); continue; }
-                  await sb.from('workers').insert({
-                      name: rows[i][0], id_number: String(rows[i][1]), job_title: rows[i][2], basic_salary: rows[i][3],
-                      payment_type: rows[i][4] === 'يومية' ? 'daily' : 'salary',
-                      current_site_id: site?.id || null, assigned_supervisor_id: supervisor?.id || null, contractor_id: cont?.id || null, 
-                      iqama_expiry: rows[i][8] || null, is_active: true
-                  });
-                  count++;
-              }
-              if(errors.length > 0) showToast(`تم استيراد ${count} موظف. أخطاء: ${errors.length}`, 'warning');
-              else showToast(`تم استيراد ${count} موظف بنجاح!`);
-              loadWorkersFull(true);
-              switchTab('list');
-          } catch(err) { showToast('حدث خطأ في قراءة الملف', 'error'); }
-          showLoad(false);
-          input.value='';
-      };
-      reader.readAsArrayBuffer(file);
   }
 
   // Attendance
@@ -1665,10 +1841,13 @@
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('attDate').value = today;
       document.getElementById('reviewDate').value = today;
-      const userSites = CUR_USER.role === 'admin' ? SITES_CACHE : SITES_CACHE.filter(s => CUR_USER.sites.includes(s.id));
-      const opts = '<option value="">كل المواقع</option>' + userSites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+      const allowed = userAllowedSiteIds();
+      const userSites = CUR_USER.role === 'admin' ? SITES_CACHE : SITES_CACHE.filter(function (s) { return allowed.indexOf(Number(s.id)) !== -1; });
+      const allLabel = CUR_USER.role === 'admin' ? 'كل المواقع' : 'كل مواقعي';
+      const opts = '<option value="">' + allLabel + '</option>' + userSites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
       document.getElementById('attSite').innerHTML = opts;
       document.getElementById('reviewSite').innerHTML = opts;
+      refreshAttendanceExcelUploadUI();
   }
 
   function switchAttTab(t) {
@@ -1677,65 +1856,6 @@
       document.querySelectorAll('#v-attendance .sub-tab').forEach((e,i)=>e.classList.toggle('active', (t=='register'&&i==0)||(t=='review'&&i==1)));
       if(t=='register') loadAttendanceRegister();
       else loadAttendanceReview();
-  }
-
-  async function loadAttendanceRegister() {
-      const dateValue = document.getElementById('attDate').value;
-      const date = dateValue.split('/').reverse().join('-');
-      const siteId = document.getElementById('attSite').value;
-      if(!date) return;
-      
-      showLoad(true);
-      SELECTED_WORKERS.clear();
-      updateSelectedCount();
-      
-      ATTENDANCE_PAGE = 0;
-      ALL_PENDING_WORKERS = [];
-      ALL_ATTENDANCE_LOADED = false;
-      
-      let allWorkers = [];
-      let from = 0;
-      const chunk = 1000;
-      
-      while(true) {
-          let query = sb.from('workers').select('*').eq('is_active',true);
-          if(siteId) query = query.eq('current_site_id',siteId);
-          else if(CUR_USER.role !== 'admin') query = query.in('current_site_id', CUR_USER.sites.length > 0 ? CUR_USER.sites : [0]);
-          
-          const {data} = await query.range(from, from + chunk - 1);
-          if(!data || data.length === 0) break;
-          allWorkers.push(...data);
-          if(data.length < chunk) break;
-          from += chunk;
-      }
-      
-      let existingAtt = [];
-      let attFrom = 0;
-      while(true) {
-          let attQuery = sb.from('attendance').select('*').eq('date',date).range(attFrom, attFrom + chunk - 1);
-          const {data} = await attQuery;
-          if(!data || data.length === 0) break;
-          existingAtt.push(...data);
-          if(data.length < chunk) break;
-          attFrom += chunk;
-      }
-      
-      const existingIds = existingAtt.map(a => a.worker_id);
-      const present = existingAtt.filter(a => a.status === 'present').length;
-      const absent = existingAtt.filter(a => a.status === 'absent').length;
-      const half = existingAtt.filter(a => a.status === 'half').length;
-      
-      document.getElementById('countTotal').innerText = allWorkers.length;
-      document.getElementById('countPending').innerText = allWorkers.length - existingIds.length;
-      document.getElementById('countPresent').innerText = present;
-      document.getElementById('countAbsent').innerText = absent;
-      document.getElementById('countHalf').innerText = half;
-      document.getElementById('selectAllCount').innerText = allWorkers.length - existingIds.length;
-      
-      ALL_PENDING_WORKERS = allWorkers.filter(w => !existingIds.includes(w.id));
-      
-      renderAttendancePage();
-      showLoad(false);
   }
 
   function renderAttendancePage() {
@@ -1840,7 +1960,22 @@
       const date = document.getElementById('attDate').value;
       const siteId = document.getElementById('attSite').value;
       const workers = Array.from(SELECTED_WORKERS);
-      
+      if (CUR_USER.role !== 'admin') {
+          if (siteId && !isSiteAllowedForCurrentUser(siteId)) {
+              return showToast('لا تملك صلاحية على الموقع المختار', 'error');
+          }
+          const allowed = userAllowedSiteIds();
+          const { data: wrows } = await sb.from('workers').select('id, current_site_id').in('id', workers);
+          const bad = (wrows || []).filter(function (w) {
+              return allowed.indexOf(Number(w.current_site_id)) === -1;
+          });
+          if (bad.length > 0) return showToast('لا يمكن تسجيل حضور لموظفين خارج مواقعك', 'error');
+          if (siteId) {
+              const mis = (wrows || []).filter(function (w) { return String(w.current_site_id) !== String(siteId); });
+              if (mis.length > 0) return showToast('بعض الموظفين لا يتبعون الموقع المختار في القائمة', 'error');
+          }
+      }
+
       closeModal('bulkAttendanceModal');
       showLoad(true, `جاري تسجيل ${workers.length} موظف...`);
       
@@ -1877,6 +2012,13 @@
       if(!checkPermission('attendance')) return;
       const date = document.getElementById('attDate').value;
       const siteId = document.getElementById('attSite').value;
+      if (CUR_USER.role !== 'admin') {
+          if (siteId && !isSiteAllowedForCurrentUser(siteId)) return showToast('لا تملك صلاحية على الموقع المختار', 'error');
+          const { data: wrow, error: werr } = await sb.from('workers').select('current_site_id').eq('id', workerId).single();
+          if (werr || !wrow) return showToast('تعذر التحقق من بيانات الموظف', 'error');
+          if (!isSiteAllowedForCurrentUser(wrow.current_site_id)) return showToast('لا يمكن تسجيل حضور لموظف خارج مواقعك', 'error');
+          if (siteId && String(wrow.current_site_id) !== String(siteId)) return showToast('الموظف لا يتبع الموقع المختار في القائمة', 'error');
+      }
       const {data:existing} = await sb.from('attendance').select('id').eq('worker_id',workerId).eq('date',date).single();
       if(existing) { showToast('هذا العامل مسجل حضوره مسبقاً!', 'error'); loadAttendanceRegister(); return; }
       
@@ -1894,15 +2036,288 @@
       showLoad(false);
   }
 
+  function excelSerialToISODate(serial) {
+      if (typeof serial !== 'number' || isNaN(serial)) return null;
+      const utcDays = Math.floor(serial - 25569);
+      const d = new Date(utcDays * 86400 * 1000);
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+  }
+
+  function parseAttendanceSheetDate(val) {
+      if (val == null || val === '') return { ok: false, reason: 'التاريخ فارغ' };
+      if (val instanceof Date && !isNaN(val.getTime())) {
+          const y = val.getFullYear();
+          const m = String(val.getMonth() + 1).padStart(2, '0');
+          const d = String(val.getDate()).padStart(2, '0');
+          return { ok: true, iso: y + '-' + m + '-' + d };
+      }
+      if (typeof val === 'number' && !isNaN(val)) {
+          const iso = excelSerialToISODate(val);
+          if (iso) return { ok: true, iso };
+          return { ok: false, reason: 'قيمة تاريخ رقمية غير صالحة' };
+      }
+      const s = String(val).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return { ok: true, iso: s };
+      const m1 = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+      if (m1) {
+          const dd = m1[1].padStart(2, '0');
+          const mm = m1[2].padStart(2, '0');
+          const yyyy = m1[3];
+          return { ok: true, iso: yyyy + '-' + mm + '-' + dd };
+      }
+      return { ok: false, reason: 'تنسيق التاريخ غير مدعوم — استخدم YYYY-MM-DD أو DD/MM/YYYY أو خلية تاريخ في Excel' };
+  }
+
+  function parseAttendanceSheetStatus(val) {
+      const s = String(val == null ? '' : val).trim().toLowerCase();
+      if (!s) return { ok: false, reason: 'الحالة فارغة' };
+      if (s === 'present' || s === 'حاضر' || s === 'p' || s === 'ح') return { ok: true, status: 'present' };
+      if (s === 'absent' || s === 'غائب' || s === 'a' || s === 'غ') return { ok: true, status: 'absent' };
+      if (s === 'half' || s === 'نصف' || s === 'نصف يوم' || s === 'نص' || s === 'h') return { ok: true, status: 'half' };
+      return { ok: false, reason: 'الحالة غير معروفة — استخدم: حاضر / غائب / نصف يوم' };
+  }
+
+  async function buildWorkersMapForAttendanceUpload() {
+      const map = Object.create(null);
+      let from = 0;
+      const chunk = 500;
+      while (true) {
+          const res = await sb.from('workers').select('id, id_number, current_site_id, is_active, is_deleted').range(from, from + chunk - 1).order('id');
+          if (res.error) return { map: null, error: res.error };
+          const data = res.data || [];
+          for (let j = 0; j < data.length; j++) {
+              const w = data[j];
+              const k = normalizeIdentityKey(w.id_number);
+              if (k) map[k] = w;
+          }
+          if (data.length < chunk) break;
+          from += chunk;
+      }
+      return { map, error: null };
+  }
+
+  function downloadAttendanceUploadTemplate() {
+      if (!CUR_USER || CUR_USER.role !== 'admin') return showToast('تحميل النموذج متاح لمدير النظام فقط', 'error');
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([
+          ['رقم_الإقامة_أو_الهوية', 'التاريخ', 'الحالة', 'اسم_الموقع_اختياري'],
+          ['1234567890', '2026-03-28', 'حاضر', ''],
+          ['0987654321', '28/03/2026', 'غائب', 'اسم الموقع كما في النظام']
+      ]);
+      XLSX.utils.book_append_sheet(wb, ws, 'تحضير');
+      XLSX.writeFile(wb, 'نموذج_رفع_التحضير.xlsx');
+      showToast('تم تنزيل النموذج');
+  }
+
+  function exportAttendanceErrorRows(headerRow, errorRows, filename) {
+      const wb = XLSX.utils.book_new();
+      const data = [headerRow.concat(['سبب_المشكلة'])].concat(errorRows.map(function (r) { return r.slice(); }));
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, 'صفوف_بها_مشاكل');
+      XLSX.writeFile(wb, filename);
+  }
+
+  async function handleAttendanceSheetUpload(input) {
+      if (!checkPermission('attendance')) return;
+      if (CUR_USER.role !== 'admin') {
+          if (input) input.value = '';
+          return showToast('رفع شيت التحضير متاح لمدير النظام فقط', 'error');
+      }
+      const file = input.files && input.files[0];
+      if (!file) return;
+      if (!confirm('سيتم التحقق من كل صف: الصحيح يُحفظ والباقي يُرفض. هل تتابع؟')) {
+          input.value = '';
+          return;
+      }
+      showLoad(true, 'جاري قراءة الشيت والتحقق...');
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+          try {
+              const data = new Uint8Array(e.target.result);
+              const wb = XLSX.read(data, { type: 'array', cellDates: true });
+              const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true });
+              if (!rows || rows.length < 2) {
+                  showLoad(false);
+                  input.value = '';
+                  return showToast('الملف فارغ أو لا يحتوي صف بيانات بعد العناوين', 'error');
+              }
+              const headerRow = rows[0].map(function (c) { return c == null ? '' : String(c); });
+              const wm = await buildWorkersMapForAttendanceUpload();
+              if (wm.error) {
+                  showLoad(false);
+                  input.value = '';
+                  return showToast('تعذر تحميل بيانات الموظفين: ' + sbErrMsg(wm.error), 'error');
+              }
+              const workerMap = wm.map;
+              const defaultSiteId = document.getElementById('attSite').value || '';
+              const seenInFile = Object.create(null);
+              const errorRows = [];
+              const toSave = [];
+
+              for (let i = 1; i < rows.length; i++) {
+                  const row = rows[i];
+                  const rawId = row && row[0];
+                  const rawDate = row && row[1];
+                  const rawStatus = row && row[2];
+                  const rawSiteName = row && row[3];
+                  const rowCopy = [
+                      rawId != null ? String(rawId) : '',
+                      rawDate != null && rawDate instanceof Date ? rawDate.toISOString().split('T')[0] : (rawDate != null ? String(rawDate) : ''),
+                      rawStatus != null ? String(rawStatus) : '',
+                      rawSiteName != null ? String(rawSiteName) : ''
+                  ];
+
+                  if (row == null || (row[0] == null || String(row[0]).trim() === '') && (row[1] == null || String(row[1]).trim() === '')) continue;
+
+                  const idTrim = rawId != null ? String(rawId).trim() : '';
+                  if (!idTrim) {
+                      errorRows.push(rowCopy.concat(['رقم الإقامة/الهوية فارغ']));
+                      continue;
+                  }
+                  const normId = normalizeIdentityKey(idTrim);
+                  if (!normId) {
+                      errorRows.push(rowCopy.concat(['رقم الإقامة/الهوية غير صالح']));
+                      continue;
+                  }
+
+                  const dParsed = parseAttendanceSheetDate(rawDate);
+                  if (!dParsed.ok) {
+                      errorRows.push(rowCopy.concat([dParsed.reason]));
+                      continue;
+                  }
+                  const isoDate = dParsed.iso;
+
+                  const st = parseAttendanceSheetStatus(rawStatus);
+                  if (!st.ok) {
+                      errorRows.push(rowCopy.concat([st.reason]));
+                      continue;
+                  }
+
+                  const dupKey = normId + '|' + isoDate;
+                  if (seenInFile[dupKey]) {
+                      errorRows.push(rowCopy.concat(['تكرار لنفس رقم الإقامة ونفس التاريخ داخل الملف']));
+                      continue;
+                  }
+                  seenInFile[dupKey] = true;
+
+                  const worker = workerMap[normId];
+                  if (!worker) {
+                      errorRows.push(rowCopy.concat(['لا يوجد موظف بهذا الرقم في النظام']));
+                      continue;
+                  }
+                  if (worker.is_deleted === true) {
+                      errorRows.push(rowCopy.concat(['الموظف محذوف منطقياً — لا يمكن تسجيل تحضير']));
+                      continue;
+                  }
+                  if (worker.is_active === false) {
+                      errorRows.push(rowCopy.concat(['الموظف موقوف — لا يمكن تسجيل تحضير']));
+                      continue;
+                  }
+
+                  if (CUR_USER.role !== 'admin') {
+                      const allowed = CUR_USER.sites && CUR_USER.sites.length > 0 ? CUR_USER.sites : [];
+                      const wid = worker.current_site_id;
+                      const okSite = wid != null && allowed.some(function (sid) { return String(sid) === String(wid); });
+                      if (!okSite) {
+                          errorRows.push(rowCopy.concat(['لا تملك صلاحية على موقع هذا الموظف']));
+                          continue;
+                      }
+                  }
+
+                  let siteId = defaultSiteId || null;
+                  const siteNameCell = rawSiteName != null ? String(rawSiteName).trim() : '';
+                  if (siteNameCell) {
+                      const found = (SITES_CACHE || []).find(function (s) {
+                          return normalizeSiteName(s.name).toLowerCase() === normalizeSiteName(siteNameCell).toLowerCase();
+                      });
+                      if (!found) {
+                          errorRows.push(rowCopy.concat(['اسم الموقع غير موجود في النظام']));
+                          continue;
+                      }
+                      siteId = String(found.id);
+                      if (worker.current_site_id != null && String(worker.current_site_id) !== String(found.id)) {
+                          errorRows.push(rowCopy.concat(['الموظف غير مرتبط بالموقع المذكور في الشيت']));
+                          continue;
+                      }
+                  }
+
+                  const ex = await sb.from('attendance').select('id').eq('worker_id', worker.id).eq('date', isoDate).limit(1);
+                  if (ex.error) {
+                      errorRows.push(rowCopy.concat(['تعذر التحقق من التكرار: ' + sbErrMsg(ex.error)]));
+                      continue;
+                  }
+                  if (ex.data && ex.data.length > 0) {
+                      errorRows.push(rowCopy.concat(['مسجّل مسبقاً لنفس الموظف في هذا التاريخ']));
+                      continue;
+                  }
+
+                  toSave.push({
+                      worker_id: worker.id,
+                      date: isoDate,
+                      site_id: siteId || null,
+                      status: st.status,
+                      recorded_by: CUR_USER.id,
+                      is_approved: false,
+                      _rowCopy: rowCopy
+                  });
+              }
+
+              let saved = 0;
+              for (let k = 0; k < toSave.length; k++) {
+                  const item = toSave[k];
+                  const rowCopy = item._rowCopy;
+                  delete item._rowCopy;
+                  const ins = await sb.from('attendance').insert(item);
+                  if (ins.error) {
+                      errorRows.push(rowCopy.concat(['فشل الحفظ: ' + sbErrMsg(ins.error)]));
+                  } else saved++;
+              }
+
+              if (errorRows.length > 0) {
+                  const fname = 'تحضير_صفوف_بها_مشاكل_' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.xlsx';
+                  exportAttendanceErrorRows(headerRow.length >= 4 ? headerRow : ['رقم_الإقامة', 'التاريخ', 'الحالة', 'الموقع'], errorRows, fname);
+              }
+
+              showLoad(false);
+              input.value = '';
+              showToast('تم حفظ ' + saved + ' سجل تحضير' + (errorRows.length ? ' — وتم تنزيل ملف بالصفوف المرفوضة (' + errorRows.length + ')' : ''));
+              await loadAttendanceRegister();
+          } catch (err) {
+              console.error(err);
+              showLoad(false);
+              input.value = '';
+              showToast('خطأ في قراءة الملف', 'error');
+          }
+      };
+      reader.readAsArrayBuffer(file);
+  }
+
   async function loadAttendanceReview() {
       const date = document.getElementById('reviewDate').value;
       const siteId = document.getElementById('reviewSite').value;
-      
+      if (CUR_USER.role !== 'admin' && siteId && !isSiteAllowedForCurrentUser(siteId)) {
+          document.getElementById('reviewSite').value = '';
+          return showToast('لا تملك صلاحية على الموقع المختار', 'error');
+      }
+      const allowedReview = userAllowedSiteIds();
       let query = sb.from('attendance').select('*, workers(name,id_number)').eq('date',date);
       if(siteId) query = query.eq('site_id',siteId);
+      else if (CUR_USER.role !== 'admin') {
+          if (allowedReview.length) query = query.in('site_id', allowedReview);
+          else query = query.eq('site_id', -1);
+      }
       
-      const allData = await fetchAllData(query);
-      
+      let allData = await fetchAllData(query);
+      if (CUR_USER.role !== 'admin' && allowedReview.length) {
+          const allowedSet = new Set(allowedReview);
+          allData = allData.filter(function (a) {
+              return a.site_id != null && allowedSet.has(Number(a.site_id));
+          });
+      }
+
       document.getElementById('attendanceReviewList').innerHTML = allData.map(a => `
       <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:15px;">
           <div><b>${a.workers?.name}</b><br><small style="color:var(--text-light);">${a.workers?.id_number}</small></div>
@@ -1915,8 +2330,10 @@
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('appDate').value = today;
       document.getElementById('appApprovedDate').value = today;
-      const userSites = CUR_USER.role === 'admin' ? SITES_CACHE : SITES_CACHE.filter(s => CUR_USER.sites.includes(s.id));
-      const opts = '<option value="">كل المواقع</option>' + userSites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+      const allowed = userAllowedSiteIds();
+      const userSites = CUR_USER.role === 'admin' ? SITES_CACHE : SITES_CACHE.filter(function (s) { return allowed.indexOf(Number(s.id)) !== -1; });
+      const allLabel = CUR_USER.role === 'admin' ? 'كل المواقع' : 'كل مواقعي';
+      const opts = '<option value="">' + allLabel + '</option>' + userSites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
       document.getElementById('appSite').innerHTML = opts;
       document.getElementById('appApprovedSite').innerHTML = opts;
   }
@@ -2342,21 +2759,53 @@
 
   async function addUser() {
       if(!checkPermission('users')) return;
-      const u=document.getElementById('nUName').value, p=document.getElementById('nUPass').value, f=document.getElementById('nUFull').value, r=document.getElementById('nURole').value;
+      const u = document.getElementById('nUName').value.trim();
+      const p = document.getElementById('nUPass').value;
+      const f = document.getElementById('nUFull').value.trim();
+      const r = document.getElementById('nURole').value;
       if(!u||!p||!f) return showToast('جميع الحقول مطلوبة', 'error');
       const sitesSelect = document.getElementById('nUSites');
       const selectedSites = Array.from(sitesSelect.selectedOptions).map(o => o.value);
       showLoad(true);
-      
-      const hashedP = await hashPassword(p);
-      const {data:user, error} = await sb.from('app_users').insert({ username:u, password:hashedP, full_name:f, role:r }).select().single();
-      if(error) { showLoad(false); return showToast('اسم المستخدم مكرر', 'error'); }
-      
-      if(selectedSites.length > 0) await sb.from('user_sites').insert(selectedSites.map(sid => ({ user_id: user.id, site_id: sid })));
-      document.getElementById('nUName').value=''; document.getElementById('nUPass').value=''; document.getElementById('nUFull').value='';
+      const email = authEmailFromUsername(u);
+      const { data: { session: adminSession } } = await sb.auth.getSession();
+      if (!adminSession) {
+          showLoad(false);
+          return showToast('جلسة غير صالحة — أعد تسجيل الدخول', 'error');
+      }
+      const { data: reg, error: regErr } = await sb.auth.signUp({ email: email, password: p });
+      if (regErr || !reg.user) {
+          showLoad(false);
+          return showToast(regErr ? ('تعذر إنشاء الدخول: ' + regErr.message) : 'فشل إنشاء المستخدم في Auth', 'error');
+      }
+      if (!reg.session) {
+          showToast(
+              'تنبيه: تم إنشاء المستخدم في Auth بدون جلسة — غالباً لأن «Confirm email» مفعّل. لن يستطيع الدخول حتى: Authentication → Users → Confirm user، أو عطّل تأكيد البريد من Providers → Email.',
+              'warning'
+          );
+      }
+      await sb.auth.setSession({
+          access_token: adminSession.access_token,
+          refresh_token: adminSession.refresh_token
+      });
+      const { data: user, error } = await sb
+          .from('app_users')
+          .insert({ username: u, full_name: f, role: r, auth_user_id: reg.user.id })
+          .select()
+          .single();
+      if (error) {
+          showLoad(false);
+          return showToast('تعذر حفظ المستخدم في الجدول (اسم مستخدم مكرر؟)', 'error');
+      }
+      if (selectedSites.length > 0) {
+          await sb.from('user_sites').insert(selectedSites.map(sid => ({ user_id: user.id, site_id: sid })));
+      }
+      document.getElementById('nUName').value = '';
+      document.getElementById('nUPass').value = '';
+      document.getElementById('nUFull').value = '';
       await loadUsers();
       showLoad(false);
-      showToast('تم إنشاء المستخدم بنجاح بالباسورد المشفر');
+      showToast('تم إنشاء المستخدم وربطه بـ Supabase Auth');
   }
 
   function openEditU(id) {
@@ -2430,13 +2879,20 @@
       const p1 = document.getElementById('newPassword').value;
       const p2 = document.getElementById('confirmPassword').value;
       if(p1 !== p2) return showToast('كلمتا المرور غير متطابقتين', 'error');
-      if(p1.length < 4) return showToast('كلمة المرور قصيرة', 'error');
+      if(p1.length < 6) return showToast('كلمة المرور قصيرة (6 أحرف على الأقل)', 'error');
       showLoad(true);
-      const hashedP = await hashPassword(p1);
-      await sb.from('app_users').update({password:hashedP}).eq('id',id);
-      closeModal('changePassModal');
+      const target = USERS_CACHE.find(x => String(x.id) === String(id));
+      const { data: { user: me } } = await sb.auth.getUser();
+      if (target && target.auth_user_id && me && target.auth_user_id === me.id) {
+          const { error } = await sb.auth.updateUser({ password: p1 });
+          showLoad(false);
+          closeModal('changePassModal');
+          if (error) return showToast(error.message, 'error');
+          return showToast('تم تغيير كلمة المرور');
+      }
       showLoad(false);
-      showToast('تم تغيير كلمة المرور وتشفيرها بنجاح');
+      closeModal('changePassModal');
+      showToast('لمستخدم آخر: افتح Supabase → Authentication → المستخدم → Set password', 'warning');
   }
 
   async function delUser(id) {
@@ -2632,54 +3088,35 @@
       showToast(`تم ${checked ? 'تفعيل' : 'تعطيل'} صلاحية ${permission} لـ ${getRoleName(role)}`);
   }
 
-  window.onload = () => {
-      const today = new Date().toISOString().split('T')[0];
-      ['repStart','repEnd'].forEach(id => { const el=document.getElementById(id); if(el) el.value=today; });
-      const chk = document.getElementById('editWActive');
-      if(chk) {
-          chk.onchange = function() {
-              const txt = document.getElementById('activeStatusText');
-              txt.innerText = this.checked ? 'نشط' : 'موقوف';
-              txt.className = this.checked ? 'badge bg-green' : 'badge bg-gray';
-          };
+  window.onload = async () => {
+      try {
+          const today = new Date().toISOString().split('T')[0];
+          ['repStart','repEnd'].forEach(id => { const el=document.getElementById(id); if(el) el.value=today; });
+          const chk = document.getElementById('editWActive');
+          if(chk) {
+              chk.onchange = function() {
+                  const txt = document.getElementById('activeStatusText');
+                  if (txt) {
+                      txt.innerText = this.checked ? 'نشط' : 'موقوف';
+                      txt.className = this.checked ? 'badge bg-green' : 'badge bg-gray';
+                  }
+              };
+          }
+          if (await tryRestoreAuthSession()) return;
+          if (await tryRestoreLegacyFromStorage()) return;
+          showLoad(false);
+          var ls = document.getElementById('loginScreen');
+          if (ls) ls.style.display = 'flex';
+      } catch (e) {
+          console.error('onload', e);
+          showLoad(false);
+          var ls2 = document.getElementById('loginScreen');
+          if (ls2) ls2.style.display = 'flex';
       }
-      if (loadUserFromStorage()) return;
-      document.getElementById('loginScreen').style.display = 'flex';
   };
 
 var ALL_DELETED_LOADED = false;
 var ALL_DELETED_WORKERS = [];
-
-function pickWorkerAuditFields(w) {
-  if (!w) return null;
-  return {
-    id: w.id,
-    name: w.name,
-    id_number: w.id_number,
-    contractor_id: w.contractor_id,
-    current_site_id: w.current_site_id,
-    assigned_supervisor_id: w.assigned_supervisor_id,
-    payment_type: w.payment_type,
-    basic_salary: w.basic_salary,
-    iqama_expiry: w.iqama_expiry,
-    job_title: w.job_title,
-    is_active: w.is_active,
-    is_deleted: w.is_deleted
-  };
-}
-
-async function logAudit(action_type, entity_type, entity_id, old_data, new_data) {
-  if (!CUR_USER) return;
-  const { error } = await sb.from('audit_logs').insert({
-    user_id: CUR_USER.id,
-    action_type,
-    entity_type,
-    entity_id: entity_id != null ? entity_id : null,
-    old_data: old_data != null ? old_data : null,
-    new_data: new_data != null ? new_data : null
-  });
-  if (error) console.warn('logAudit', error);
-}
 
 function sbErrMsg(err) {
   if (!err) return '';
@@ -2688,46 +3125,7 @@ function sbErrMsg(err) {
   return (s || 'خطأ غير معروف').slice(0, 240);
 }
 
-function injectAuditUI() {
-  if (!document.getElementById('n-audit')) {
-  var rolesBtn = document.getElementById('n-roles');
-  if (rolesBtn) {
-    var b = document.createElement('button');
-    b.id = 'n-audit';
-    b.className = 'nav-btn hidden';
-    b.setAttribute('onclick', "nav('audit')");
-    b.innerHTML = '<i class="fa-solid fa-clipboard-list"></i> سجل الأحداث';
-    rolesBtn.insertAdjacentElement('afterend', b);
-  }
-  }
-  var main = document.querySelector('.main-content');
-  if (main && !document.getElementById('v-audit')) {
-    var wrap = document.createElement('div');
-    wrap.id = 'v-audit';
-    wrap.className = 'view-section hidden';
-    wrap.innerHTML =
-      '<div class="card">' +
-      '<h3 style="margin-top:0;"><i class="fa-solid fa-clipboard-list"></i> سجل الأحداث</h3>' +
-      '<div class="grid-3" style="margin-bottom:20px;">' +
-      '<div><label class="input-label-secondary">نوع العملية</label>' +
-      '<select id="auditActionFilter">' +
-      '<option value="">الكل</option>' +
-      '<option value="insert">إضافة</option>' +
-      '<option value="update">تعديل</option>' +
-      '<option value="soft_delete">إخفاء (حذف منطقي)</option>' +
-      '<option value="restore">استعادة</option>' +
-      '</select></div>' +
-      '<div><label class="input-label-secondary">من تاريخ</label><input type="date" id="auditFrom"></div>' +
-      '<div><label class="input-label-secondary">إلى تاريخ</label><input type="date" id="auditTo"></div>' +
-      '</div>' +
-      '<div class="flex-row" style="gap:12px; flex-wrap:wrap;">' +
-      '<button type="button" onclick="loadAuditLogs()" class="btn btn-gold btn-sm" style="width:auto;"><i class="fa-solid fa-search"></i> عرض</button>' +
-      '<button type="button" onclick="exportAuditLogs()" class="btn btn-outline btn-sm" style="width:auto;"><i class="fa-solid fa-file-excel"></i> تصدير Excel</button>' +
-      '</div>' +
-      '<div id="auditLogsList" style="margin-top:20px;"></div>' +
-      '</div>';
-    main.appendChild(wrap);
-  }
+function injectShowDeletedWorkersCheckbox() {
   var showInactiveCb = document.getElementById('showInactiveW');
   if (showInactiveCb && showInactiveCb.parentElement && !document.getElementById('showDeletedW')) {
     var lab = document.createElement('label');
@@ -2795,13 +3193,8 @@ async function loadDeletedWorkers(reset) {
 async function restoreWorker(id) {
   if (CUR_USER.role !== 'admin') return showToast('استعادة المحذوفين للمدير فقط', 'error');
   if (!confirm('استعادة الموظف إلى القوائم؟')) return;
-  var w = ALL_DELETED_WORKERS.find(function (x) {
-    return x.id === id;
-  });
-  var oldSnap = w ? pickWorkerAuditFields(w) : null;
   showLoad(true);
   var up = await sb.from('workers').update({ is_deleted: false }).eq('id', id);
-  if (!up.error) await logAudit('restore', 'workers', id, oldSnap, { is_deleted: false });
   ALL_DELETED_WORKERS = ALL_DELETED_WORKERS.filter(function (x) {
     return x.id !== id;
   });
@@ -2810,83 +3203,6 @@ async function restoreWorker(id) {
   showLoad(false);
   if (up.error) showToast('فشل الاستعادة: ' + sbErrMsg(up.error), 'error');
   else showToast('تمت الاستعادة');
-}
-
-async function loadAuditLogs() {
-  if (!CUR_USER || CUR_USER.role !== 'admin') return;
-  showLoad(true);
-  var action = (document.getElementById('auditActionFilter') || {}).value || '';
-  var fromD = (document.getElementById('auditFrom') || {}).value || '';
-  var toD = (document.getElementById('auditTo') || {}).value || '';
-  var q = sb.from('audit_logs').select('*, app_users:user_id(full_name, username)').order('created_at', { ascending: false }).limit(2000);
-  if (action) q = q.eq('action_type', action);
-  if (fromD) q = q.gte('created_at', fromD + 'T00:00:00');
-  if (toD) q = q.lte('created_at', toD + 'T23:59:59');
-  var res = await q;
-  showLoad(false);
-  if (res.error) return showToast('خطأ جلب السجل', 'error');
-  var fmt = function (j) {
-    return j ? JSON.stringify(j).slice(0, 800) : '-';
-  };
-  var list = document.getElementById('auditLogsList');
-  if (!list) return;
-  list.innerHTML =
-    (res.data || [])
-      .map(function (r) {
-        var who = (r.app_users && (r.app_users.full_name || r.app_users.username)) || r.user_id;
-        return (
-          '<div class="card" style="margin-bottom:10px; padding:15px;">' +
-          '<div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;"><b>' +
-          r.action_type +
-          '</b>' +
-          '<small style="color:var(--text-light);">' +
-          new Date(r.created_at).toLocaleString('ar-SA') +
-          '</small></div>' +
-          '<div><small>الكيان: ' +
-          r.entity_type +
-          ' #' +
-          (r.entity_id != null ? r.entity_id : '-') +
-          ' | بواسطة: ' +
-          who +
-          '</small></div>' +
-          '<details style="margin-top:8px;"><summary>بيانات قديمة / جديدة</summary>' +
-          '<pre style="white-space:pre-wrap; font-size:0.75rem; background:var(--bg-main); padding:10px; border-radius:8px;">قديم:\n' +
-          fmt(r.old_data) +
-          '\n\nجديد:\n' +
-          fmt(r.new_data) +
-          '</pre></details></div>'
-        );
-      })
-      .join('') || '<p style="text-align:center; color:var(--text-light);">لا سجلات</p>';
-}
-
-async function exportAuditLogs() {
-  if (!CUR_USER || CUR_USER.role !== 'admin') return;
-  showLoad(true);
-  var action = (document.getElementById('auditActionFilter') || {}).value || '';
-  var fromD = (document.getElementById('auditFrom') || {}).value || '';
-  var toD = (document.getElementById('auditTo') || {}).value || '';
-  var q = sb.from('audit_logs').select('*, app_users:user_id(full_name, username)').order('created_at', { ascending: false }).limit(10000);
-  if (action) q = q.eq('action_type', action);
-  if (fromD) q = q.gte('created_at', fromD + 'T00:00:00');
-  if (toD) q = q.lte('created_at', toD + 'T23:59:59');
-  var res = await q;
-  showLoad(false);
-  if (res.error) return showToast('خطأ التصدير', 'error');
-  var headers = ['التاريخ', 'نوع العملية', 'الكيان', 'معرف', 'المستخدم', 'بيانات قديمة', 'بيانات جديدة'];
-  var rows = (res.data || []).map(function (r) {
-    return [
-      new Date(r.created_at).toLocaleString('ar-SA'),
-      r.action_type,
-      r.entity_type,
-      r.entity_id,
-      (r.app_users && (r.app_users.full_name || r.app_users.username)) || r.user_id,
-      r.old_data ? JSON.stringify(r.old_data) : '',
-      r.new_data ? JSON.stringify(r.new_data) : ''
-    ];
-  });
-  exportToExcel([headers].concat(rows), 'سجل_الأحداث.xlsx');
-  showToast('تم التصدير');
 }
 
 loadWorkersFull = async function (reset) {
@@ -3035,10 +3351,8 @@ delWorker = async function (id) {
     w = one.data;
   }
   if (!w) return showToast('لم يُعثر على الموظف', 'error');
-  var oldSnap = pickWorkerAuditFields(w);
   showLoad(true);
   var up = await sb.from('workers').update({ is_deleted: true }).eq('id', id);
-  if (!up.error) await logAudit('soft_delete', 'workers', id, oldSnap, { is_deleted: true });
   await loadWorkersFull(true);
   await loadWorkersPageGlobalStats();
   showLoad(false);
@@ -3057,8 +3371,7 @@ bulkDeleteWorkers = async function () {
     var w = ALL_WORKERS.find(function (x) {
       return x.id === wid;
     });
-    var up = await sb.from('workers').update({ is_deleted: true }).eq('id', wid);
-    if (!up.error && w) await logAudit('soft_delete', 'workers', wid, pickWorkerAuditFields(w), { is_deleted: true });
+    await sb.from('workers').update({ is_deleted: true }).eq('id', wid);
   }
   showLoad(false);
   showToast('تم إخفاء ' + ids.length + ' موظف');
@@ -3071,7 +3384,8 @@ bulkDeleteWorkers = async function () {
 
 addWorker = async function () {
   if (!checkPermission('workers')) return;
-  var idNum = document.getElementById('newWIqama').value.trim();
+  var idRaw = document.getElementById('newWIqama').value;
+  var idNum = String(idRaw || '').trim();
   var expiry = document.getElementById('newWIqamaExpiry').value || null;
   var d = {
     id_number: idNum,
@@ -3085,29 +3399,21 @@ addWorker = async function () {
     is_active: true,
     is_deleted: false
   };
-  if (!d.name || !d.id_number) return showToast('يرجى إدخال الاسم ورقم الهوية', 'error');
-  var ex = await sb.from('workers').select('*').eq('id_number', idNum).limit(1);
-  if (ex.error) return showToast('تعذر التحقق من الهوية: ' + sbErrMsg(ex.error), 'error');
-  var row = ex.data && ex.data[0];
+  if (!d.name || !idNum) return showToast('يرجى إدخال الاسم ورقم الهوية / الإقامة / الجواز', 'error');
+  var dupChk = await findWorkerConflictingIdentity(idNum, null);
+  if (dupChk.error) return showToast('تعذر التحقق من الرقم: ' + sbErrMsg(dupChk.error), 'error');
+  var row = dupChk.row;
   if (row && row.is_deleted !== true) {
     return showToast(
-      'رقم الهوية مسجّل بالفعل لموظف في النظام (يظهر في القائمة بعد «تحديث»). إن لم يظهر فقد يكون بموقع آخر أو لديك قيود صلاحيات في Supabase.',
+      'رقم الهوية أو الإقامة أو الجواز مسجّل مسبقاً لموظف آخر — لا يُقبل التكرار.',
       'error'
     );
   }
   showLoad(true);
   if (row) {
-    var oldSnap = pickWorkerAuditFields(row);
     var up = await sb.from('workers').update(d).eq('id', row.id);
     showLoad(false);
     if (up.error) return showToast('خطأ في التحديث: ' + sbErrMsg(up.error), 'error');
-    await logAudit(
-      'restore',
-      'workers',
-      row.id,
-      oldSnap,
-      pickWorkerAuditFields(Object.assign({}, row, d))
-    );
     showToast('تمت استعادة موظف محذوف منطقياً وتحديث بياناته');
   } else {
     var ins = await sb.from('workers').insert(d).select('id').single();
@@ -3116,13 +3422,12 @@ addWorker = async function () {
       var em = sbErrMsg(ins.error);
       if (ins.error.code === '23505' || /duplicate|unique/i.test(em)) {
         return showToast(
-          'رقم الهوية موجود في الجدول لكن التطبيق لم يستطع قراءة الصف (غالباً سياسات RLS في Supabase). افتح جدول workers من لوحة Supabase أو رخّص SELECT/UPDATE للصفوف حيث is_deleted = true.',
+          'رقم الهوية/الإقامة/الجواز مكرر في قاعدة البيانات أو لا يمكن التحقق منه (صلاحيات RLS).',
           'error'
         );
       }
       return showToast('خطأ في الحفظ: ' + em, 'error');
     }
-    if (ins.data && ins.data.id) await logAudit('insert', 'workers', ins.data.id, null, pickWorkerAuditFields(Object.assign({ id: ins.data.id }, d)));
     showToast('تم حفظ الموظف بنجاح');
   }
   document.getElementById('newWIqama').value = '';
@@ -3147,18 +3452,9 @@ saveWorkerEdit = async function () {
     is_active: document.getElementById('editWActive').checked
   };
   showLoad(true);
-  var prev = await sb.from('workers').select('*').eq('id', id).single();
-  var oldRow = prev.data;
   var up = await sb.from('workers').update(payload).eq('id', id);
   showLoad(false);
   if (up.error) return showToast('حدث خطأ', 'error');
-  await logAudit(
-    'update',
-    'workers',
-    parseInt(id, 10),
-    oldRow ? pickWorkerAuditFields(oldRow) : null,
-    Object.assign({ id: parseInt(id, 10) }, payload)
-  );
   closeModal('editWorkerModal');
   await loadWorkersFull(true);
   showToast('تم حفظ التغييرات');
@@ -3197,11 +3493,14 @@ loadDashboard = async function () {
   var workersCount = (await sb.from('workers').select('*', { count: 'exact', head: true }).eq('is_active', true).or('is_deleted.eq.false,is_deleted.is.null')).count || 0;
   var inactiveWorkersCount = (await sb.from('workers').select('*', { count: 'exact', head: true }).eq('is_active', false).or('is_deleted.eq.false,is_deleted.is.null')).count || 0;
   var contsCount = (await sb.from('contractors').select('*', { count: 'exact', head: true })).count || 0;
-  document.getElementById('dashSites').innerText = sitesCount;
-  document.getElementById('dashWorkers').innerText = workersCount;
+  var elDs = document.getElementById('dashSites');
+  var elDw = document.getElementById('dashWorkers');
   var dIn = document.getElementById('dashInactiveWorkers');
+  var elDc = document.getElementById('dashConts');
+  if (elDs) elDs.innerText = sitesCount;
+  if (elDw) elDw.innerText = workersCount;
   if (dIn) dIn.innerText = inactiveWorkersCount;
-  document.getElementById('dashConts').innerText = contsCount;
+  if (elDc) elDc.innerText = contsCount;
   var today = new Date().toISOString().split('T')[0];
   var todayAtt = (await sb.from('attendance').select('status').eq('date', today).eq('is_approved', true)).data || [];
   var present = todayAtt.filter(function (a) {
@@ -3213,19 +3512,27 @@ loadDashboard = async function () {
   var half = todayAtt.filter(function (a) {
     return a.status === 'half';
   }).length;
-  document.getElementById('chartPresent').innerText = present;
-  document.getElementById('chartAbsent').innerText = absent;
-  document.getElementById('chartHalf').innerText = half;
-  var ctx = document.getElementById('attendanceChart').getContext('2d');
-  if (attendanceChart) attendanceChart.destroy();
-  attendanceChart = new Chart(ctx, {
-    type: 'pie',
-    data: {
-      labels: ['حاضر', 'غائب', 'نصف يوم'],
-      datasets: [{ data: [present, absent, half], backgroundColor: ['#28a745', '#dc3545', '#fd7e14'], borderWidth: 0 }]
-    },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-  });
+  var cp = document.getElementById('chartPresent');
+  var ca = document.getElementById('chartAbsent');
+  var ch = document.getElementById('chartHalf');
+  if (cp) cp.innerText = present;
+  if (ca) ca.innerText = absent;
+  if (ch) ch.innerText = half;
+  var chartCanvas = document.getElementById('attendanceChart');
+  if (chartCanvas && typeof Chart !== 'undefined') {
+    var ctx = chartCanvas.getContext('2d');
+    if (ctx) {
+      if (attendanceChart) attendanceChart.destroy();
+      attendanceChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ['حاضر', 'غائب', 'نصف يوم'],
+          datasets: [{ data: [present, absent, half], backgroundColor: ['#28a745', '#dc3545', '#fd7e14'], borderWidth: 0 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+    }
+  }
   var siteAtt = (
     await sb.from('attendance').select('site_id, sites(name), count').eq('date', today).eq('is_approved', true).in('status', ['present', 'half'])
   ).data;
@@ -3251,7 +3558,8 @@ loadDashboard = async function () {
       );
     })
     .join('');
-  document.getElementById('topSitesList').innerHTML = topSites || '<p style="color:var(--text-light);">لا توجد بيانات</p>';
+  var topEl = document.getElementById('topSitesList');
+  if (topEl) topEl.innerHTML = topSites || '<p style="color:var(--text-light);">لا توجد بيانات</p>';
   var todayDate = new Date();
   var thirtyDaysLater = new Date();
   thirtyDaysLater.setDate(todayDate.getDate() + 30);
@@ -3268,23 +3576,26 @@ loadDashboard = async function () {
       .order('iqama_expiry')
       .limit(10)
   ).data;
-  document.getElementById('expiryAlerts').innerHTML =
-    (expiringWorkers || [])
-      .map(function (w) {
-        var daysLeft = Math.ceil((new Date(w.iqama_expiry) - new Date()) / (1000 * 60 * 60 * 24));
-        return (
-          '<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-color);"><span><b>' +
-          w.name +
-          '</b><br><small>' +
-          w.id_number +
-          '</small></span><span class="badge ' +
-          (daysLeft < 7 ? 'bg-red' : 'bg-orange') +
-          '">' +
-          daysLeft +
-          ' يوم</span></div>'
-        );
-      })
-      .join('') || '<p style="color:var(--text-light);">لا توجد إقامات منتهية قريباً</p>';
+  var expEl = document.getElementById('expiryAlerts');
+  if (expEl) {
+    expEl.innerHTML =
+      (expiringWorkers || [])
+        .map(function (w) {
+          var daysLeft = Math.ceil((new Date(w.iqama_expiry) - new Date()) / (1000 * 60 * 60 * 24));
+          return (
+            '<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-color);"><span><b>' +
+            w.name +
+            '</b><br><small>' +
+            w.id_number +
+            '</small></span><span class="badge ' +
+            (daysLeft < 7 ? 'bg-red' : 'bg-orange') +
+            '">' +
+            daysLeft +
+            ' يوم</span></div>'
+          );
+        })
+        .join('') || '<p style="color:var(--text-light);">لا توجد إقامات منتهية قريباً</p>';
+  }
   var now = new Date();
   var firstDayThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
   var lastDayThisMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -3298,14 +3609,18 @@ loadDashboard = async function () {
   var lastMonthDays = lastMonthAtt.filter(function (a) {
     return a.status === 'present' || a.status === 'half';
   }).length;
-  document.getElementById('thisMonthDays').innerText = thisMonthDays;
-  document.getElementById('lastMonthDays').innerText = lastMonthDays;
+  var elTmd = document.getElementById('thisMonthDays');
+  var elLmd = document.getElementById('lastMonthDays');
+  if (elTmd) elTmd.innerText = thisMonthDays;
+  if (elLmd) elLmd.innerText = lastMonthDays;
   var diff = thisMonthDays - lastMonthDays;
   var diffPercent = lastMonthDays ? Math.round((diff / lastMonthDays) * 100) : 0;
   var comparisonEl = document.getElementById('comparisonResult');
-  if (diff > 0) comparisonEl.innerHTML = '<span style="color:var(--green);">زيادة بنسبة ' + Math.abs(diffPercent) + '% عن الشهر الماضي</span>';
-  else if (diff < 0) comparisonEl.innerHTML = '<span style="color:var(--red);">انخفاض بنسبة ' + Math.abs(diffPercent) + '% عن الشهر الماضي</span>';
-  else comparisonEl.innerHTML = '<span style="color:var(--text-light);">لا تغيير عن الشهر الماضي</span>';
+  if (comparisonEl) {
+    if (diff > 0) comparisonEl.innerHTML = '<span style="color:var(--green);">زيادة بنسبة ' + Math.abs(diffPercent) + '% عن الشهر الماضي</span>';
+    else if (diff < 0) comparisonEl.innerHTML = '<span style="color:var(--red);">انخفاض بنسبة ' + Math.abs(diffPercent) + '% عن الشهر الماضي</span>';
+    else comparisonEl.innerHTML = '<span style="color:var(--text-light);">لا تغيير عن الشهر الماضي</span>';
+  }
   var topWorkersData = (
     await sb
       .from('attendance')
@@ -3340,31 +3655,38 @@ loadDashboard = async function () {
       );
     })
     .join('');
-  document.getElementById('topWorkersList').innerHTML = topWorkers || '<p style="color:var(--text-light);">لا توجد بيانات</p>';
+  var twl = document.getElementById('topWorkersList');
+  if (twl) twl.innerHTML = topWorkers || '<p style="color:var(--text-light);">لا توجد بيانات</p>';
   var recentWorkers = (await sb.from('workers').select('*,sites(name)').or('is_deleted.eq.false,is_deleted.is.null').order('id', { ascending: false }).limit(5)).data;
-  document.getElementById('dashRecentWorkers').innerHTML =
-    (recentWorkers || [])
-      .map(function (w) {
-        return (
-          '<div style="padding:10px; border-bottom:1px solid var(--border-color);"><b>' +
-          w.name +
-          '</b> - <small style="color:var(--text-light);">' +
-          (w.sites && w.sites.name ? w.sites.name : 'غير محدد') +
-          '</small></div>'
-        );
-      })
-      .join('') || '<p style="color:var(--text-light);">لا يوجد</p>';
+  var drw = document.getElementById('dashRecentWorkers');
+  if (drw) {
+    drw.innerHTML =
+      (recentWorkers || [])
+        .map(function (w) {
+          return (
+            '<div style="padding:10px; border-bottom:1px solid var(--border-color);"><b>' +
+            w.name +
+            '</b> - <small style="color:var(--text-light);">' +
+            (w.sites && w.sites.name ? w.sites.name : 'غير محدد') +
+            '</small></div>'
+          );
+        })
+        .join('') || '<p style="color:var(--text-light);">لا يوجد</p>';
+  }
   var corrections = (await sb.from('correction_requests').select('*').eq('status', 'pending').limit(5)).data;
-  document.getElementById('dashPendingCorrections').innerHTML =
-    (corrections || [])
-      .map(function (c) {
-        return (
-          '<div style="padding:10px; border-bottom:1px solid var(--border-color);"><span class="badge bg-orange">معلق</span> <small>' +
-          new Date(c.created_at).toLocaleDateString('ar-SA') +
-          '</small></div>'
-        );
-      })
-      .join('') || '<p style="color:var(--text-light);">لا يوجد طلبات</p>';
+  var dpc = document.getElementById('dashPendingCorrections');
+  if (dpc) {
+    dpc.innerHTML =
+      (corrections || [])
+        .map(function (c) {
+          return (
+            '<div style="padding:10px; border-bottom:1px solid var(--border-color);"><span class="badge bg-orange">معلق</span> <small>' +
+            new Date(c.created_at).toLocaleDateString('ar-SA') +
+            '</small></div>'
+          );
+        })
+        .join('') || '<p style="color:var(--text-light);">لا يوجد طلبات</p>';
+  }
 };
 
 handleExcelUpload = async function (input) {
@@ -3379,6 +3701,14 @@ handleExcelUpload = async function (input) {
   var reader = new FileReader();
   reader.onload = async function (e) {
     try {
+      var idx = await buildWorkersIdentityMap();
+      if (idx.error) {
+        showLoad(false);
+        input.value = '';
+        return showToast('تعذر التحقق من أرقام الهوية: ' + sbErrMsg(idx.error), 'error');
+      }
+      var idMap = idx.map;
+      var seenInFile = Object.create(null);
       var data = new Uint8Array(e.target.result);
       var wb = XLSX.read(data, { type: 'array' });
       var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
@@ -3386,18 +3716,27 @@ handleExcelUpload = async function (input) {
       var errors = [];
       for (var i = 1; i < rows.length; i++) {
         if (!rows[i][0] || !rows[i][1]) continue;
+        var idStr = String(rows[i][1]).trim();
+        var norm = normalizeIdentityKey(idStr);
+        if (!norm) {
+          errors.push('الصف ' + (i + 1) + ': رقم الهوية/الإقامة/الجواز فارغ أو غير صالح');
+          continue;
+        }
+        if (seenInFile[norm]) {
+          errors.push('الصف ' + (i + 1) + ': تكرار لنفس الرقم داخل الملف (صف سابق)');
+          continue;
+        }
+        seenInFile[norm] = true;
         var site = SITES_CACHE.find(function (s) {
-          return s.name === rows[i][5];
+          return normalizeSiteName(s.name).toLowerCase() === normalizeSiteName(rows[i][5]).toLowerCase();
         });
         var cont = CONTS_CACHE.find(function (c) {
-          return c.name === rows[i][7];
+          return normalizeSiteName(c.name).toLowerCase() === normalizeSiteName(rows[i][7]).toLowerCase();
         });
         var supervisor = await sb.from('app_users').select('id').eq('full_name', rows[i][6]).eq('role', 'supervisor').single();
-        var idStr = String(rows[i][1]);
-        var existingRes = await sb.from('workers').select('*').eq('id_number', idStr).limit(1);
-        var existingRow = existingRes.data && existingRes.data[0];
+        var existingRow = idMap[norm];
         if (existingRow && existingRow.is_deleted !== true) {
-          errors.push('الصف ' + (i + 1) + ': ' + rows[i][1] + ' مسجل كنشط');
+          errors.push('الصف ' + (i + 1) + ': الرقم مسجّل لموظف نشط (هوية/إقامة/جواز)');
           continue;
         }
         var rowPayload = {
@@ -3414,24 +3753,22 @@ handleExcelUpload = async function (input) {
           is_deleted: false
         };
         if (existingRow) {
-          var oldSnap = pickWorkerAuditFields(existingRow);
           var up = await sb.from('workers').update(rowPayload).eq('id', existingRow.id);
           if (!up.error) {
-            await logAudit(
-              'restore',
-              'workers',
-              existingRow.id,
-              oldSnap,
-              pickWorkerAuditFields(Object.assign({}, existingRow, rowPayload))
-            );
             count++;
+            idMap[norm] = { id: existingRow.id, id_number: idStr, is_deleted: false };
           } else errors.push('الصف ' + (i + 1) + ': فشل تحديث سجل قديم — ' + sbErrMsg(up.error));
         } else {
           var ins = await sb.from('workers').insert(rowPayload).select('id').single();
           if (!ins.error && ins.data && ins.data.id) {
-            await logAudit('insert', 'workers', ins.data.id, null, pickWorkerAuditFields(Object.assign({ id: ins.data.id }, rowPayload)));
             count++;
-          } else if (ins.error) errors.push('الصف ' + (i + 1) + ': فشل الإدراج');
+            idMap[norm] = { id: ins.data.id, id_number: idStr, is_deleted: false };
+          } else if (ins.error) {
+            var em = sbErrMsg(ins.error);
+            if (ins.error.code === '23505' || /duplicate|unique/i.test(em))
+              errors.push('الصف ' + (i + 1) + ': رقم مكرر في القاعدة');
+            else errors.push('الصف ' + (i + 1) + ': فشل الإدراج');
+          }
         }
       }
       if (errors.length > 0) showToast('تم استيراد ' + count + ' موظف. أخطاء: ' + errors.length, 'warning');
@@ -3492,8 +3829,34 @@ exportWorkersPDF = async function (siteId, contId) {
 loadAttendanceRegister = async function () {
   var dateValue = document.getElementById('attDate').value;
   var date = dateValue.split('/').reverse().join('-');
-  var siteId = document.getElementById('attSite').value;
+  var siteIdRaw = document.getElementById('attSite').value;
   if (!date) return;
+
+  var allowed = userAllowedSiteIds();
+  if (CUR_USER.role !== 'admin') {
+    if (!allowed.length) {
+      showToast('لم يُربط حسابك بأي موقع — راجع مدير النظام', 'warning');
+      document.getElementById('countTotal').innerText = '0';
+      document.getElementById('countPending').innerText = '0';
+      document.getElementById('countPresent').innerText = '0';
+      document.getElementById('countAbsent').innerText = '0';
+      document.getElementById('countHalf').innerText = '0';
+      document.getElementById('selectAllCount').innerText = '0';
+      ALL_PENDING_WORKERS = [];
+      ATTENDANCE_PAGE = 0;
+      ALL_ATTENDANCE_LOADED = true;
+      document.getElementById('attendanceRegisterList').innerHTML =
+        '<div class="card" style="text-align:center; padding:40px; color:var(--text-light);">لا توجد مواقع مخصصة لهذا الحساب.</div>';
+      document.getElementById('attendanceLoadMore').innerHTML = '';
+      return;
+    }
+    if (siteIdRaw && !isSiteAllowedForCurrentUser(siteIdRaw)) {
+      showToast('لا تملك صلاحية على الموقع المختار — تم إعادة التصفية', 'error');
+      document.getElementById('attSite').value = '';
+      siteIdRaw = '';
+    }
+  }
+
   showLoad(true);
   SELECTED_WORKERS.clear();
   updateSelectedCount();
@@ -3505,8 +3868,12 @@ loadAttendanceRegister = async function () {
   var chunk = 1000;
   while (true) {
     var query = sb.from('workers').select('*').eq('is_active', true).or('is_deleted.eq.false,is_deleted.is.null');
-    if (siteId) query = query.eq('current_site_id', siteId);
-    else if (CUR_USER.role !== 'admin') query = query.in('current_site_id', CUR_USER.sites.length > 0 ? CUR_USER.sites : [0]);
+    if (CUR_USER.role === 'admin') {
+      if (siteIdRaw) query = query.eq('current_site_id', siteIdRaw);
+    } else {
+      if (siteIdRaw) query = query.eq('current_site_id', siteIdRaw);
+      else query = query.in('current_site_id', allowed);
+    }
     var res = await query.range(from, from + chunk - 1);
     var data = res.data;
     if (!data || data.length === 0) break;
@@ -3525,16 +3892,21 @@ loadAttendanceRegister = async function () {
     if (ad.length < chunk) break;
     attFrom += chunk;
   }
-  var existingIds = existingAtt.map(function (a) {
+  var workerIdSet = {};
+  for (var wi = 0; wi < allWorkers.length; wi++) workerIdSet[allWorkers[wi].id] = true;
+  var existingAttScoped = existingAtt.filter(function (a) {
+    return workerIdSet[a.worker_id];
+  });
+  var existingIds = existingAttScoped.map(function (a) {
     return a.worker_id;
   });
-  var present = existingAtt.filter(function (a) {
+  var present = existingAttScoped.filter(function (a) {
     return a.status === 'present';
   }).length;
-  var absent = existingAtt.filter(function (a) {
+  var absent = existingAttScoped.filter(function (a) {
     return a.status === 'absent';
   }).length;
-  var half = existingAtt.filter(function (a) {
+  var half = existingAttScoped.filter(function (a) {
     return a.status === 'half';
   }).length;
   document.getElementById('countTotal').innerText = allWorkers.length;
@@ -3550,21 +3922,16 @@ loadAttendanceRegister = async function () {
   showLoad(false);
 };
 
-injectAuditUI();
+injectShowDeletedWorkersCheckbox();
 
 var _windowOnloadOrig = window.onload;
 window.onload = function () {
   var t = new Date();
-  var first = new Date(t.getFullYear(), t.getMonth(), 1).toISOString().split('T')[0];
   var today = t.toISOString().split('T')[0];
   ['repStart', 'repEnd'].forEach(function (id) {
     var el = document.getElementById(id);
     if (el) el.value = today;
   });
-  var af = document.getElementById('auditFrom');
-  var at = document.getElementById('auditTo');
-  if (af) af.value = first;
-  if (at) at.value = today;
   var chk = document.getElementById('editWActive');
   if (chk) {
     chk.onchange = function () {
