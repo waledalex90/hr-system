@@ -924,6 +924,72 @@
       const safe = t.replace(/[^a-z0-9._+-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || 'user';
       return safe + '@' + AUTH_EMAIL_DOMAIN;
   }
+
+  /** جلسة Supabase الحالية؛ يجرّب تحديث التوكن إن انتهت صلاحية الجلسة */
+  async function getActiveAuthSession() {
+      var r = await sb.auth.getSession();
+      var s = r && r.data && r.data.session;
+      if (s) return s;
+      var ref = await sb.auth.refreshSession();
+      if (ref && ref.data && ref.data.session) return ref.data.session;
+      return null;
+  }
+
+  /**
+   * بعد الدخول بالمسار القديم: يحاول signIn في Auth. يعيد الإيميل المحسوب ورسالة الخطأ من Supabase إن فشل.
+   */
+  async function tryAttachSupabaseSessionAfterLegacyLogin(username, plainPassword) {
+      var email = authEmailFromUsername(username);
+      if (!plainPassword) return { ok: false, email: email, errText: '' };
+      try {
+          var res = await withTimeout(
+              sb.auth.signInWithPassword({ email: email, password: plainPassword }),
+              20000,
+              'مهلة ربط جلسة Auth'
+          );
+          if (res && !res.error && res.data && res.data.session) return { ok: true, email: email, errText: '' };
+          var msg = res && res.error ? String(res.error.message || '') : '';
+          return { ok: false, email: email, errText: msg };
+      } catch (e) {
+          console.warn('tryAttachSupabaseSessionAfterLegacyLogin', e);
+          return { ok: false, email: email, errText: e && e.message ? String(e.message) : 'انتهت مهلة الاتصال' };
+      }
+  }
+
+  /** رسالة عربية عند فشل signIn في Auth بعد الدخول القديم أو من نافذة إضافة مستخدم */
+  function formatAuthAttachFailureForToast(ar, mode) {
+      var err = ar && ar.errText ? String(ar.errText) : '';
+      var low = err.toLowerCase();
+      var invalid =
+          low.indexOf('invalid login') !== -1 ||
+          low.indexOf('invalid credentials') !== -1 ||
+          low.indexOf('invalid email or password') !== -1;
+      var email = ar && ar.email ? ar.email : '';
+      if (mode === 'brief') {
+          var s = 'تنبيه: لم يُربط Supabase Auth. الإيميل المطلوب: ' + email;
+          if (err) s += ' (' + err + ')';
+          if (invalid) {
+              s +=
+                  ' — أضف المستخدم بهذا الإيميل أو من Users → Set new password ليطابق كلمة الدخول (هاش الجدول قد يختلف عن Auth).';
+          } else {
+              s += ' — أنشئ الحساب بهذا الإيميل أو استخدم اسم دخول لاتيني.';
+          }
+          return s;
+      }
+      var full = 'تعذر ربط الجلسة — الإيميل: ' + email;
+      if (err) full += ' — ' + err;
+      if (invalid) {
+          full +=
+              ' · Invalid login غالباً: لا يوجد حساب بهذا الإيميل في Authentication، أو كلمة مرور Auth ≠ ما أدخلته. الحل: Supabase → Authentication → Users — Add user (نفس الإيميل أعلاه + نفس كلمة مرور الدخول) أو اختر المستخدم → Set new password. عطّل Confirm email مؤقتاً إن لزم.';
+      } else if (low.indexOf('email not confirmed') !== -1) {
+          full += ' · أكّد البريد أو عطّل Confirm email في Providers → Email.';
+      } else {
+          full +=
+              ' · أنشئ في Authentication مستخدماً بهذا الإيميل ونفس كلمة المرور، أو عطّل Confirm email · يُفضّل اسم دخول لاتيني (walid) ليتطابق الإيميل.';
+      }
+      return full;
+  }
+
   let CUR_USER = null, ALL_WORKERS = [], SITES_CACHE = [], CONTS_CACHE = [], USERS_CACHE = [];
   let WORKERS_PAGE = 0;
   const WORKERS_PER_PAGE = 100;
@@ -964,8 +1030,26 @@
       return true;
   }
 
-  // Toast
-  function showToast(msg, type='success') {
+  /** يظهر تفاصيل أخطاء الشبكة/قاعدة البيانات في التوستات فقط لحساب المدير الرئيسي (username = admin) */
+  function canSeeDiagnosticToasts() {
+      if (CUR_USER && String(CUR_USER.username || '').toLowerCase() === 'admin') return true;
+      try {
+          var ls = document.getElementById('loginScreen');
+          var un = document.getElementById('uName');
+          if (ls && un && ls.style.display !== 'none' && String(un.value || '').trim().toLowerCase() === 'admin') return true;
+      } catch (e) {}
+      return false;
+  }
+
+  // Toast — opts.technical: لا يُعرض أي إشعار للمستخدم غير المدير الرئيسي (بدل رسائل عامة مزعجة)
+  function showToast(msg, type='success', opts) {
+      opts = opts || {};
+      if ((type === 'error' || type === 'warning') && opts.technical && !canSeeDiagnosticToasts()) {
+          try {
+              console.warn('[HR]', type, msg);
+          } catch (e) {}
+          return;
+      }
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
       toast.className = `toast ${type}`;
@@ -973,6 +1057,10 @@
       toast.innerHTML = `<i class="fa-solid ${icon}" style="color:var(--${type==='error'?'red':type==='warning'?'orange':'green'})"></i><span>${msg}</span>`;
       container.appendChild(toast);
       setTimeout(() => toast.remove(), 3000);
+  }
+
+  function showTechnicalToast(msg, type) {
+      showToast(msg, type, { technical: true });
   }
 
   function normalizeSiteName(s) {
@@ -1213,7 +1301,7 @@
                   await withTimeout(applyCurUserFromProfile(profile), 120000, 'مهلة تحميل التطبيق');
               } catch (applyErr) {
                   console.error(applyErr);
-                  showToast(
+                  showTechnicalToast(
                       'تعذر إكمال الدخول التلقائي. جرّب تسجيل الدخول يدوياً؛ أو شغّل الملف من خادم محلي (http://localhost) وليس file://',
                       'error'
                   );
@@ -1265,7 +1353,7 @@
                   await withTimeout(applyCurUserFromProfile(row), 120000, 'مهلة تحميل التطبيق');
               } catch (applyErr) {
                   console.error(applyErr);
-                  showToast(
+                  showTechnicalToast(
                       'تعذر إكمال الدخول التلقائي. جرّب تسجيل الدخول يدوياً؛ أو افتح الصفحة عبر http://localhost بدل file://',
                       'error'
                   );
@@ -1308,7 +1396,7 @@
           );
       } catch (e) {
           showLoad(false);
-          return showToast('انتهت مهلة الاتصال — تحقق من الشبكة أو افتح الصفحة عبر http://localhost بدل file://', 'error');
+          return showTechnicalToast('انتهت مهلة الاتصال — تحقق من الشبكة أو افتح الصفحة عبر http://localhost بدل file://', 'error');
       }
       const authData = signRes && signRes.data;
       const authErr = signRes && signRes.error;
@@ -1327,7 +1415,7 @@
           } catch (e) {
               await sb.auth.signOut();
               showLoad(false);
-              return showToast('انتهت مهلة الاتصال — أعد المحاولة', 'error');
+              return showTechnicalToast('انتهت مهلة الاتصال — أعد المحاولة', 'error');
           }
           const profile = profRes && profRes.data;
           const profErr = profRes && profRes.error;
@@ -1337,7 +1425,7 @@
                   await withTimeout(applyCurUserFromProfile(profile), 120000, 'مهلة تحميل التطبيق');
               } catch (e) {
                   console.error('applyCurUserFromProfile', e);
-                  showToast('خطأ أثناء فتح التطبيق — تحقق من البيانات والصلاحيات', 'error');
+                  showTechnicalToast('خطأ أثناء فتح التطبيق — تحقق من البيانات والصلاحيات', 'error');
                   await sb.auth.signOut();
               } finally {
                   showLoad(false);
@@ -1360,7 +1448,7 @@
           );
       } catch (e) {
           showLoad(false);
-          return showToast('انتهت مهلة الاتصال — أعد المحاولة', 'error');
+          return showTechnicalToast('انتهت مهلة الاتصال — أعد المحاولة', 'error');
       }
       const row = rowRes && rowRes.data;
       const legErr = rowRes && rowRes.error;
@@ -1377,14 +1465,20 @@
           role: row.role,
           user_sites: row.user_sites
       };
+      var attachRes = await tryAttachSupabaseSessionAfterLegacyLogin(u, p);
       document.getElementById('uPass').value = '';
       try {
           await withTimeout(applyCurUserFromProfile(profile), 120000, 'مهلة تحميل التطبيق');
       } catch (e) {
           console.error('applyCurUserFromProfile', e);
-          showToast('خطأ أثناء فتح التطبيق — تحقق من البيانات والصلاحيات', 'error');
+          showTechnicalToast('خطأ أثناء فتح التطبيق — تحقق من البيانات والصلاحيات', 'error');
       } finally {
           showLoad(false);
+      }
+      if (attachRes.ok && profile.role === 'admin') {
+          showToast('تم ربط الجلسة مع Supabase — يمكنك الآن «إنشاء مستخدم»', 'success');
+      } else if (profile.role === 'admin' && !attachRes.ok) {
+          showTechnicalToast(formatAuthAttachFailureForToast(attachRes, 'brief'), 'warning');
       }
   }
 
@@ -1425,7 +1519,7 @@
       } catch (e) {
           console.error('loadData', e);
           var hint = e && e.message ? ' (' + e.message + ')' : '';
-          showToast('تعذر تحميل بعض البيانات — تحقق من الاتصال وصلاحيات Supabase' + hint, 'error');
+          showTechnicalToast('تعذر تحميل بعض البيانات — تحقق من الاتصال وصلاحيات Supabase' + hint, 'error');
       } finally {
           showLoad(false);
       }
@@ -1458,12 +1552,38 @@
   async function loadSites() {
       const {data} = await sb.from('sites').select('*, contractors(name)').order('name');
       SITES_CACHE = data || [];
-      const opts = '<option value="">اختر...</option>' + SITES_CACHE.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-      const allOpts = '<option value="">كل المواقع</option>' + SITES_CACHE.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-      ['newWSite','editWSite','nSiteCont','attSite','reviewSite','appSite','appApprovedSite','repSite', 'filtSite'].forEach(id => {
-          const el = document.getElementById(id);
-          if(el) el.innerHTML = id.includes('filt') || id.includes('rep') || id.includes('app') || id.includes('review') || id.includes('att') ? allOpts : opts;
-      });
+      const optsChoose = '<option value="">اختر...</option>' + SITES_CACHE.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+      const optsAllSites = '<option value="">كل المواقع</option>' + SITES_CACHE.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+      const allowedIds = userAllowedSiteIds();
+      const sitesForSupervisor =
+          CUR_USER.role === 'supervisor'
+              ? SITES_CACHE.filter(function (s) {
+                    return allowedIds.indexOf(Number(s.id)) !== -1;
+                })
+              : SITES_CACHE;
+      const attAllLabel = CUR_USER.role === 'supervisor' ? 'كل مواقعي' : 'كل المواقع';
+      const optsAttendance = '<option value="">' + attAllLabel + '</option>' + sitesForSupervisor.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+      const sitesForDataEntry =
+          CUR_USER.role === 'data_entry'
+              ? SITES_CACHE.filter(function (s) {
+                    return allowedIds.indexOf(Number(s.id)) !== -1;
+                })
+              : SITES_CACHE;
+      const appAllLabel = CUR_USER.role === 'data_entry' ? 'كل مواقعي' : 'كل المواقع';
+      const optsApproval = '<option value="">' + appAllLabel + '</option>' + sitesForDataEntry.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+      const setSel = function (id, html) {
+          var el = document.getElementById(id);
+          if (el) el.innerHTML = html;
+      };
+      setSel('newWSite', optsChoose);
+      setSel('editWSite', optsChoose);
+      setSel('nSiteCont', optsChoose);
+      setSel('filtSite', optsAllSites);
+      setSel('repSite', optsAllSites);
+      setSel('attSite', optsAttendance);
+      setSel('reviewSite', optsAttendance);
+      setSel('appSite', optsApproval);
+      setSel('appApprovedSite', optsApproval);
       const allowedLs = userAllowedSiteIds();
       const userSites = CUR_USER.role === 'admin' ? SITES_CACHE : SITES_CACHE.filter(function (s) { return allowedLs.indexOf(Number(s.id)) !== -1; });
       const sitesListEl = document.getElementById('sitesList');
@@ -1494,8 +1614,8 @@
       if (error) {
           const em = (error.message || '') + (error.details || '');
           if (error.code === '23505' || /duplicate|unique/i.test(em))
-              return showToast('اسم الموقع مكرر في قاعدة البيانات', 'error');
-          return showToast('تعذر إضافة الموقع', 'error');
+              return showTechnicalToast('اسم الموقع مكرر في قاعدة البيانات', 'error');
+          return showTechnicalToast('تعذر إضافة الموقع', 'error');
       }
       showToast('تم إضافة الموقع بنجاح');
   }
@@ -1511,7 +1631,6 @@
 
   async function delSite(id) {
       if(!checkPermission('sites')) return;
-      if(!confirm('هل أنت متأكد؟')) return;
       showLoad(true);
       await sb.from('sites').delete().eq('id',id);
       await loadSites();
@@ -1566,7 +1685,6 @@
 
   async function delCont(id) {
       if(!checkPermission('sites')) return;
-      if(!confirm('هل أنت متأكد؟')) return;
       showLoad(true);
       await sb.from('contractors').delete().eq('id',id);
       await loadConts();
@@ -1610,7 +1728,7 @@
       
       const {data, count, error} = await query;
       
-      if(error) { showToast('خطأ في التحميل', 'error'); return; }
+      if(error) { showTechnicalToast('خطأ في التحميل', 'error'); return; }
       
       if(data && data.length > 0) {
           ALL_WORKERS = [...ALL_WORKERS, ...data];
@@ -1688,13 +1806,12 @@
       
       const ids = Array.from(SELECTED_WORKERS_DELETE);
       if(ids.length === 0) return;
-      if(!confirm(`متأكد إنك عايز تحذف ${ids.length} موظف بشكل نهائي؟`)) return;
 
       showLoad(true, 'جاري الحذف...');
       const {error} = await sb.from('workers').delete().in('id', ids);
       showLoad(false);
 
-      if(error) return showToast('حصل خطأ أثناء الحذف', 'error');
+      if(error) return showTechnicalToast('حصل خطأ أثناء الحذف', 'error');
       
       showToast(`تم حذف ${ids.length} موظف بنجاح`);
       SELECTED_WORKERS_DELETE.clear();
@@ -1842,8 +1959,15 @@
       document.getElementById('attDate').value = today;
       document.getElementById('reviewDate').value = today;
       const allowed = userAllowedSiteIds();
-      const userSites = CUR_USER.role === 'admin' ? SITES_CACHE : SITES_CACHE.filter(function (s) { return allowed.indexOf(Number(s.id)) !== -1; });
-      const allLabel = CUR_USER.role === 'admin' ? 'كل المواقع' : 'كل مواقعي';
+      const userSites =
+          CUR_USER.role === 'admin' || CUR_USER.role === 'hr'
+              ? SITES_CACHE
+              : CUR_USER.role === 'supervisor'
+                ? SITES_CACHE.filter(function (s) {
+                      return allowed.indexOf(Number(s.id)) !== -1;
+                  })
+                : SITES_CACHE;
+      const allLabel = CUR_USER.role === 'supervisor' ? 'كل مواقعي' : 'كل المواقع';
       const opts = '<option value="">' + allLabel + '</option>' + userSites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
       document.getElementById('attSite').innerHTML = opts;
       document.getElementById('reviewSite').innerHTML = opts;
@@ -2015,7 +2139,7 @@
       if (CUR_USER.role !== 'admin') {
           if (siteId && !isSiteAllowedForCurrentUser(siteId)) return showToast('لا تملك صلاحية على الموقع المختار', 'error');
           const { data: wrow, error: werr } = await sb.from('workers').select('current_site_id').eq('id', workerId).single();
-          if (werr || !wrow) return showToast('تعذر التحقق من بيانات الموظف', 'error');
+          if (werr || !wrow) return showTechnicalToast('تعذر التحقق من بيانات الموظف', 'error');
           if (!isSiteAllowedForCurrentUser(wrow.current_site_id)) return showToast('لا يمكن تسجيل حضور لموظف خارج مواقعك', 'error');
           if (siteId && String(wrow.current_site_id) !== String(siteId)) return showToast('الموظف لا يتبع الموقع المختار في القائمة', 'error');
       }
@@ -2026,7 +2150,7 @@
       const {error} = await sb.from('attendance').insert({
           worker_id: workerId, date: date, site_id: siteId || null, status: status, recorded_by: CUR_USER.id, is_approved: false
       });
-      if(error) showToast('خطأ في التسجيل', 'error');
+      if(error) showTechnicalToast('خطأ في التسجيل', 'error');
       else {
           showToast('تم تسجيل الحضور بنجاح');
           const card = document.getElementById(`worker-${workerId}`);
@@ -2128,10 +2252,6 @@
       }
       const file = input.files && input.files[0];
       if (!file) return;
-      if (!confirm('سيتم التحقق من كل صف: الصحيح يُحفظ والباقي يُرفض. هل تتابع؟')) {
-          input.value = '';
-          return;
-      }
       showLoad(true, 'جاري قراءة الشيت والتحقق...');
       const reader = new FileReader();
       reader.onload = async function (e) {
@@ -2149,7 +2269,7 @@
               if (wm.error) {
                   showLoad(false);
                   input.value = '';
-                  return showToast('تعذر تحميل بيانات الموظفين: ' + sbErrMsg(wm.error), 'error');
+                  return showTechnicalToast('تعذر تحميل بيانات الموظفين: ' + sbErrMsg(wm.error), 'error');
               }
               const workerMap = wm.map;
               const defaultSiteId = document.getElementById('attSite').value || '';
@@ -2289,7 +2409,7 @@
               console.error(err);
               showLoad(false);
               input.value = '';
-              showToast('خطأ في قراءة الملف', 'error');
+              showTechnicalToast('خطأ في قراءة الملف', 'error');
           }
       };
       reader.readAsArrayBuffer(file);
@@ -2331,8 +2451,15 @@
       document.getElementById('appDate').value = today;
       document.getElementById('appApprovedDate').value = today;
       const allowed = userAllowedSiteIds();
-      const userSites = CUR_USER.role === 'admin' ? SITES_CACHE : SITES_CACHE.filter(function (s) { return allowed.indexOf(Number(s.id)) !== -1; });
-      const allLabel = CUR_USER.role === 'admin' ? 'كل المواقع' : 'كل مواقعي';
+      const userSites =
+          CUR_USER.role === 'admin' || CUR_USER.role === 'hr'
+              ? SITES_CACHE
+              : CUR_USER.role === 'data_entry'
+                ? SITES_CACHE.filter(function (s) {
+                      return allowed.indexOf(Number(s.id)) !== -1;
+                  })
+                : SITES_CACHE;
+      const allLabel = CUR_USER.role === 'data_entry' ? 'كل مواقعي' : 'كل المواقع';
       const opts = '<option value="">' + allLabel + '</option>' + userSites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
       document.getElementById('appSite').innerHTML = opts;
       document.getElementById('appApprovedSite').innerHTML = opts;
@@ -2400,7 +2527,6 @@
       if(!checkPermission('approval')) return;
       const selected = Array.from(document.querySelectorAll('.pending-checkbox:checked')).map(cb => cb.value);
       if(selected.length === 0) return showToast('يرجى اختيار سجل واحد على الأقل', 'warning');
-      if(!confirm(`هل أنت متأكد من ${action === 'approve' ? 'اعتماد' : action === 'reject' ? 'رفض' : 'حذف'} ${selected.length} سجل؟`)) return;
       
       showLoad(true, `جاري ${action === 'approve' ? 'الاعتماد' : action === 'reject' ? 'الرفض' : 'الحذف'}...`);
       let success = 0;
@@ -2460,8 +2586,7 @@
   }
 
   async function requestCorrection(attId) {
-      const reason = prompt('سبب طلب التعديل:');
-      if(!reason) return;
+      const reason = 'طلب تعديل';
       showLoad(true);
       await sb.from('correction_requests').insert({attendance_id: attId, requester_id: CUR_USER.id, reason: reason, status: 'pending'});
       showLoad(false);
@@ -2503,7 +2628,6 @@
 
   async function rejectCorrection(id) {
       if(!checkPermission('approval')) return;
-      if(!confirm('رفض الطلب؟')) return;
       showLoad(true);
       await sb.from('correction_requests').update({status:'rejected'}).eq('id',id);
       loadCorrections();
@@ -2553,7 +2677,7 @@
               if(format === 'excel') await exportContractorReport(start, end, siteId, contId);
               else await exportContractorPDF(start, end, siteId, contId);
           }
-      } catch(err) { console.error(err); showToast('حدث خطأ أثناء إعداد التقرير', 'error'); }
+      } catch(err) { console.error(err); showTechnicalToast('حدث خطأ أثناء إعداد التقرير', 'error'); }
       showLoad(false);
       document.getElementById('progressContainer').classList.add('hidden');
   }
@@ -2696,7 +2820,7 @@
 
   async function generatePDF(title, headers, rows) {
       if (typeof window.html2canvas !== 'function') {
-          showToast('مكتبة تصدير PDF غير جاهزة. جرب تحديث الصفحة.', 'error');
+          showTechnicalToast('مكتبة تصدير PDF غير جاهزة. جرب تحديث الصفحة.', 'error');
           return;
       }
       const headRow = Array.isArray(headers[0]) ? headers[0] : headers;
@@ -2732,7 +2856,7 @@
       } catch (err) {
           document.body.removeChild(div);
           console.error(err);
-          showToast('حدث خطأ في إنشاء PDF: ' + (err.message || ''), 'error');
+          showTechnicalToast('حدث خطأ في إنشاء PDF: ' + (err.message || ''), 'error');
       }
   }
 
@@ -2767,19 +2891,47 @@
       const sitesSelect = document.getElementById('nUSites');
       const selectedSites = Array.from(sitesSelect.selectedOptions).map(o => o.value);
       showLoad(true);
-      const email = authEmailFromUsername(u);
-      const { data: { session: adminSession } } = await sb.auth.getSession();
+      const hashedP = await hashPassword(p);
+      var adminSession = await getActiveAuthSession();
+
+      /* بدون جلسة Auth: نفس سلوك النسخة القديمة — إدراج في app_users + هاش كلمة المرور */
       if (!adminSession) {
+          const { data: user, error } = await sb
+              .from('app_users')
+              .insert({ username: u, password: hashedP, full_name: f, role: r })
+              .select()
+              .single();
+          if (error) {
+              showLoad(false);
+              return showTechnicalToast('تعذر الإضافة — اسم مستخدم مكرر أو صلاحيات RLS تمنع الإدراج بدون جلسة', 'error');
+          }
+          if (selectedSites.length > 0) {
+              await sb.from('user_sites').insert(selectedSites.map(sid => ({ user_id: user.id, site_id: sid })));
+          }
+          document.getElementById('nUName').value = '';
+          document.getElementById('nUPass').value = '';
+          document.getElementById('nUFull').value = '';
+          await loadUsers();
           showLoad(false);
-          return showToast('جلسة غير صالحة — أعد تسجيل الدخول', 'error');
+          if (canSeeDiagnosticToasts()) {
+              showToast(
+                  'تم إنشاء المستخدم (دخول عبر الجدول). عند تفعيل RLS أنشئ له حساباً في Authentication واربط auth_user_id.',
+                  'success'
+              );
+          } else {
+              showToast('تم إنشاء المستخدم', 'success');
+          }
+          return;
       }
+
+      const email = authEmailFromUsername(u);
       const { data: reg, error: regErr } = await sb.auth.signUp({ email: email, password: p });
       if (regErr || !reg.user) {
           showLoad(false);
-          return showToast(regErr ? ('تعذر إنشاء الدخول: ' + regErr.message) : 'فشل إنشاء المستخدم في Auth', 'error');
+          return showTechnicalToast(regErr ? ('تعذر إنشاء الدخول: ' + regErr.message) : 'فشل إنشاء المستخدم في Auth', 'error');
       }
       if (!reg.session) {
-          showToast(
+          showTechnicalToast(
               'تنبيه: تم إنشاء المستخدم في Auth بدون جلسة — غالباً لأن «Confirm email» مفعّل. لن يستطيع الدخول حتى: Authentication → Users → Confirm user، أو عطّل تأكيد البريد من Providers → Email.',
               'warning'
           );
@@ -2790,12 +2942,12 @@
       });
       const { data: user, error } = await sb
           .from('app_users')
-          .insert({ username: u, full_name: f, role: r, auth_user_id: reg.user.id })
+          .insert({ username: u, password: hashedP, full_name: f, role: r, auth_user_id: reg.user.id })
           .select()
           .single();
       if (error) {
           showLoad(false);
-          return showToast('تعذر حفظ المستخدم في الجدول (اسم مستخدم مكرر؟)', 'error');
+          return showTechnicalToast('تعذر حفظ المستخدم في الجدول (اسم مستخدم مكرر؟)', 'error');
       }
       if (selectedSites.length > 0) {
           await sb.from('user_sites').insert(selectedSites.map(sid => ({ user_id: user.id, site_id: sid })));
@@ -2887,12 +3039,12 @@
           const { error } = await sb.auth.updateUser({ password: p1 });
           showLoad(false);
           closeModal('changePassModal');
-          if (error) return showToast(error.message, 'error');
+          if (error) return showTechnicalToast(error.message, 'error');
           return showToast('تم تغيير كلمة المرور');
       }
       showLoad(false);
       closeModal('changePassModal');
-      showToast('لمستخدم آخر: افتح Supabase → Authentication → المستخدم → Set password', 'warning');
+      showTechnicalToast('لمستخدم آخر: افتح Supabase → Authentication → المستخدم → Set password', 'warning');
   }
 
   async function delUser(id) {
@@ -2902,7 +3054,6 @@
           showToast('لا يمكن حذف المستخدم admin', 'error');
           return;
       }
-      if(!confirm('حذف المستخدم؟')) return;
       showLoad(true);
       await sb.from('app_users').delete().eq('id',id);
       await loadUsers();
@@ -3177,7 +3328,7 @@ async function loadDeletedWorkers(reset) {
     }
     var res = await q;
     if (res.error) {
-      showToast('خطأ تحميل المحذوفين: ' + sbErrMsg(res.error), 'error');
+      showTechnicalToast('خطأ تحميل المحذوفين: ' + sbErrMsg(res.error), 'error');
       break;
     }
     var data = res.data;
@@ -3192,7 +3343,6 @@ async function loadDeletedWorkers(reset) {
 
 async function restoreWorker(id) {
   if (CUR_USER.role !== 'admin') return showToast('استعادة المحذوفين للمدير فقط', 'error');
-  if (!confirm('استعادة الموظف إلى القوائم؟')) return;
   showLoad(true);
   var up = await sb.from('workers').update({ is_deleted: false }).eq('id', id);
   ALL_DELETED_WORKERS = ALL_DELETED_WORKERS.filter(function (x) {
@@ -3201,7 +3351,7 @@ async function restoreWorker(id) {
   await loadWorkersFull(true);
   await loadWorkersPageGlobalStats();
   showLoad(false);
-  if (up.error) showToast('فشل الاستعادة: ' + sbErrMsg(up.error), 'error');
+  if (up.error) showTechnicalToast('فشل الاستعادة: ' + sbErrMsg(up.error), 'error');
   else showToast('تمت الاستعادة');
 }
 
@@ -3230,7 +3380,7 @@ loadWorkersFull = async function (reset) {
   }
   var res = await query;
   if (res.error) {
-    showToast('خطأ في التحميل: ' + sbErrMsg(res.error), 'error');
+    showTechnicalToast('خطأ في التحميل: ' + sbErrMsg(res.error), 'error');
     return;
   }
   var data = res.data;
@@ -3342,7 +3492,6 @@ renderWorkers = function () {
 
 delWorker = async function (id) {
   if (CUR_USER.role !== 'admin') return showToast('صلاحية الحذف للمدير فقط', 'error');
-  if (!confirm('سيتم إخفاء الموظف من القوائم (حذف منطقي). هل تؤكد؟')) return;
   var w = ALL_WORKERS.find(function (x) {
     return x.id === id;
   });
@@ -3364,7 +3513,6 @@ bulkDeleteWorkers = async function () {
   if (CUR_USER.role !== 'admin') return showToast('صلاحية الحذف للمدير فقط', 'error');
   var ids = Array.from(SELECTED_WORKERS_DELETE);
   if (ids.length === 0) return;
-  if (!confirm('سيتم إخفاء ' + ids.length + ' موظف (حذف منطقي). هل تؤكد؟')) return;
   showLoad(true, 'جاري الإخفاء...');
   for (var i = 0; i < ids.length; i++) {
     var wid = ids[i];
@@ -3401,7 +3549,7 @@ addWorker = async function () {
   };
   if (!d.name || !idNum) return showToast('يرجى إدخال الاسم ورقم الهوية / الإقامة / الجواز', 'error');
   var dupChk = await findWorkerConflictingIdentity(idNum, null);
-  if (dupChk.error) return showToast('تعذر التحقق من الرقم: ' + sbErrMsg(dupChk.error), 'error');
+  if (dupChk.error) return showTechnicalToast('تعذر التحقق من الرقم: ' + sbErrMsg(dupChk.error), 'error');
   var row = dupChk.row;
   if (row && row.is_deleted !== true) {
     return showToast(
@@ -3413,7 +3561,7 @@ addWorker = async function () {
   if (row) {
     var up = await sb.from('workers').update(d).eq('id', row.id);
     showLoad(false);
-    if (up.error) return showToast('خطأ في التحديث: ' + sbErrMsg(up.error), 'error');
+    if (up.error) return showTechnicalToast('خطأ في التحديث: ' + sbErrMsg(up.error), 'error');
     showToast('تمت استعادة موظف محذوف منطقياً وتحديث بياناته');
   } else {
     var ins = await sb.from('workers').insert(d).select('id').single();
@@ -3421,12 +3569,12 @@ addWorker = async function () {
     if (ins.error) {
       var em = sbErrMsg(ins.error);
       if (ins.error.code === '23505' || /duplicate|unique/i.test(em)) {
-        return showToast(
+        return showTechnicalToast(
           'رقم الهوية/الإقامة/الجواز مكرر في قاعدة البيانات أو لا يمكن التحقق منه (صلاحيات RLS).',
           'error'
         );
       }
-      return showToast('خطأ في الحفظ: ' + em, 'error');
+      return showTechnicalToast('خطأ في الحفظ: ' + em, 'error');
     }
     showToast('تم حفظ الموظف بنجاح');
   }
@@ -3693,10 +3841,6 @@ handleExcelUpload = async function (input) {
   if (!checkPermission('workers')) return;
   var file = input.files[0];
   if (!file) return;
-  if (!confirm('سيتم استيراد البيانات. هل تريد المتابعة؟')) {
-    input.value = '';
-    return;
-  }
   showLoad(true);
   var reader = new FileReader();
   reader.onload = async function (e) {
@@ -3705,7 +3849,7 @@ handleExcelUpload = async function (input) {
       if (idx.error) {
         showLoad(false);
         input.value = '';
-        return showToast('تعذر التحقق من أرقام الهوية: ' + sbErrMsg(idx.error), 'error');
+        return showTechnicalToast('تعذر التحقق من أرقام الهوية: ' + sbErrMsg(idx.error), 'error');
       }
       var idMap = idx.map;
       var seenInFile = Object.create(null);
@@ -3776,7 +3920,7 @@ handleExcelUpload = async function (input) {
       await loadWorkersFull(true);
       switchTab('list');
     } catch (err) {
-      showToast('حدث خطأ في قراءة الملف', 'error');
+      showTechnicalToast('حدث خطأ في قراءة الملف', 'error');
     }
     showLoad(false);
     input.value = '';
