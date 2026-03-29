@@ -434,6 +434,19 @@
   </div>
 </div>
 
+<div id="transferRejectModal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>سبب الرفض</h3>
+    <input type="hidden" id="transferRejectRequestId">
+    <input type="hidden" id="transferRejectStep">
+    <textarea id="transferRejectReasonInput" rows="4" placeholder="اكتب السبب..." style="width:100%; margin-bottom:15px; font-family:Tajawal,sans-serif;"></textarea>
+    <div class="flex-row" style="gap:10px;">
+      <button type="button" class="btn btn-red" style="width:auto;" onclick="confirmTransferReject()">تأكيد الرفض</button>
+      <button type="button" class="btn btn-outline" style="width:auto;" onclick="closeModal('transferRejectModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <div id="bulkAttendanceModal" class="modal-overlay">
   <div class="modal-box">
     <h3>تسجيل حضور مجموعة</h3>
@@ -476,6 +489,7 @@
     <button onclick="nav('contractors')" id="n-contractors" class="nav-btn hidden"><i class="fa-solid fa-handshake"></i> المقاولين</button>
     <button onclick="nav('attendance')" id="n-attendance" class="nav-btn hidden"><i class="fa-solid fa-clipboard-user"></i> تسجيل الحضور</button>
     <button onclick="nav('approval')" id="n-approval" class="nav-btn hidden"><i class="fa-solid fa-clipboard-check"></i> اعتماد الحضور</button>
+    <button onclick="nav('transfers')" id="n-transfers" class="nav-btn hidden"><i class="fa-solid fa-right-left"></i> نقل الموظفين</button>
     <button onclick="nav('reports')" id="n-reports" class="nav-btn hidden"><i class="fa-solid fa-chart-pie"></i> التقارير</button>
     <button onclick="nav('corrections')" id="n-corrections" class="nav-btn hidden"><i class="fa-solid fa-pen-to-square"></i> طلبات التعديل</button>
     <button onclick="nav('users')" id="n-users" class="nav-btn hidden"><i class="fa-solid fa-user-shield"></i> المستخدمين</button>
@@ -819,6 +833,73 @@
           </div>
           <div id="approvedAttendanceList"></div>
        </div>
+    </div>
+
+    <div id="v-transfers" class="view-section hidden">
+      <div id="transferPanelSupervisor" class="hidden">
+        <div class="grid-2" style="align-items:start;">
+          <div class="card">
+            <h3 style="margin-top:0;"><i class="fa-solid fa-right-left"></i> سير عمل النقل</h3>
+            <p style="color:var(--text-light); font-size:0.9rem;">اختر موظفاً من أحد مواقعك، ثم الموقع الجديد. يُعرض مشرف الموقع المستهدف للتأكيد قبل الإرسال.</p>
+            <div><label class="input-label-secondary">الموظف</label><select id="transferWorkerSelect" onchange="onTransferWorkerOrSiteChange()"><option value="">اختر...</option></select></div>
+            <div><label class="input-label-secondary">الموقع الجديد</label><select id="transferToSiteSelect" onchange="onTransferWorkerOrSiteChange()"><option value="">اختر...</option></select></div>
+            <div id="transferDestSupervisorBox" style="display:none; background:var(--bg-main); padding:12px; border-radius:8px; margin-bottom:12px;">
+              <b>مشرف الموقع المستهدف:</b>
+              <div id="transferDestSupervisorNames" style="margin-top:8px;"></div>
+              <div id="transferDestSupervisorPickWrap" class="hidden" style="margin-top:12px;">
+                <label class="input-label-secondary">اختر المشرف المسؤول عن الاعتماد</label>
+                <select id="transferDestSupervisorSelect"></select>
+              </div>
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:12px;">
+              <input type="checkbox" id="transferConfirmSupervisor" style="width:auto;"> أؤكد أن المشرف أعلاه هو المسؤول عن الموقع المستهدف
+            </label>
+            <button type="button" onclick="submitWorkerTransferRequest()" class="btn btn-gold" style="max-width:240px;">إرسال طلب النقل</button>
+            <div class="card" style="margin-top:20px;">
+              <h4 style="margin-top:0;">طلباتي</h4>
+              <div id="transferMyRequestsList"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <h3 style="margin-top:0;"><i class="fa-solid fa-clipboard-check"></i> اعتماد طلبات النقل</h3>
+              <div id="transferPendingDestList"></div>
+            </div>
+            <div class="card" style="margin-top:20px;">
+              <h4 style="margin-top:0;"><i class="fa-solid fa-bell"></i> إشعارات</h4>
+              <p style="color:var(--text-light); font-size:0.85rem; margin-top:0;">رفض من المشرف الآخر، مدخل البيانات، أو الموارد البشرية.</p>
+              <div id="transferSupervisorNotifyList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="transferPanelDataEntry" class="hidden">
+        <div class="grid-2" style="align-items:start;">
+          <div class="card">
+            <h3 style="margin-top:0;">طلبات النقل — مدخل بيانات</h3>
+            <div id="transferDEpendingList"></div>
+          </div>
+          <div class="card">
+            <h3 style="margin-top:0;">إشعارات</h3>
+            <p style="color:var(--text-light); font-size:0.85rem; margin-top:0;">رفض الموارد البشرية لطلب وافقت عليه (يُبلَّغ المشرفان أيضاً).</p>
+            <div id="transferDENotifyList"></div>
+          </div>
+        </div>
+      </div>
+      <div id="transferPanelHR" class="hidden">
+        <div class="card">
+          <h3 style="margin-top:0;">طلبات النقل — موارد بشرية</h3>
+          <p style="color:var(--text-light); font-size:0.88rem;">قبول (تنفيذ النقل تلقائياً للموقع المحدد في القائمة)، أو حفظ موقع بديل فقط، أو رفض (يُبلَّغ المشرفان ومدخل البيانات).</p>
+          <div id="transferHRpendingList"></div>
+        </div>
+      </div>
+      <div id="transferPanelAdmin" class="hidden">
+        <div class="card">
+          <h3 style="margin-top:0;"><i class="fa-solid fa-user-shield"></i> طلبات النقل — مدير النظام</h3>
+          <p style="color:var(--text-light); font-size:0.88rem;">يمكنك تخطي أي مرحلة (مشرف الوجهة / مدخل البيانات) أو تنفيذ النقل مباشرة للموقع المحدد في القائمة — دون تعارض مع تعديل المواقع من شاشة الموظفين.</p>
+          <div id="transferAdminPendingList"></div>
+        </div>
+      </div>
     </div>
 
     <div id="v-reports" class="view-section hidden">
@@ -1186,6 +1267,592 @@
       if(v === 'approval') { initApprovalFilters(); loadPendingApproval(); }
       if(v === 'corrections') loadCorrections();
       if(v === 'roles') loadRoles();
+      if(v === 'transfers') refreshTransferViews();
+  }
+
+  // ---------- طلبات نقل الموظفين بين المواقع (جدول worker_transfer_requests) ----------
+  var TRANSFER_STATUS_LABEL = {
+      pending_destination: 'بانتظار مشرف الموقع المستهدف',
+      rejected_destination: 'مرفوض من مشرف الموقع المستهدف',
+      pending_data_entry: 'بانتظار مدخل البيانات',
+      rejected_data_entry: 'مرفوض من مدخل البيانات',
+      pending_hr: 'بانتظار الموارد البشرية',
+      rejected_hr: 'مرفوض من الموارد البشرية',
+      approved: 'تم تنفيذ النقل'
+  };
+  function transferStatusLabel(st) {
+      return TRANSFER_STATUS_LABEL[st] || st;
+  }
+  /** أخطاء النقل: نعرض نص Supabase + توجيه عند RLS (anon مقابل authenticated) */
+  function transferFlowError(message, err) {
+      var det = '';
+      if (err && typeof sbErrMsg === 'function') det = sbErrMsg(err);
+      else if (err && err.message) det = String(err.message);
+      if (err && !det) det = err.code ? String(err.code) : '';
+      var rls = det.toLowerCase().indexOf('row-level security') !== -1;
+      if (det) {
+          var hint = '';
+          if (rls) {
+              hint =
+                  ' · السبب: الطلب يُنفَّذ كدور anon (غالباً دخول قديم بدون جلسة Supabase Auth) بينما السياسة كانت لـ authenticated فقط. الحل: نفّذ في SQL Editor الملف supabase_worker_transfer_requests_fix_rls_only.sql أو سجّل دخولاً عبر Authentication.';
+          }
+          showToast(message + ' — ' + det + hint, 'error');
+      } else showToast(message, 'error');
+  }
+  function siteNameByIdForTransfer(id) {
+      if (id == null || id === '') return '—';
+      var s = (SITES_CACHE || []).find(function (x) {
+          return String(x.id) === String(id);
+      });
+      return s ? s.name : '#' + id;
+  }
+  async function fetchSupervisorsForSite(siteId) {
+      var sid = parseInt(String(siteId), 10);
+      if (isNaN(sid)) return [];
+      var r = await sb.from('app_users').select('id, full_name, user_sites(site_id)').eq('role', 'supervisor');
+      if (r.error || !r.data) return [];
+      return r.data.filter(function (u) {
+          var us = u.user_sites || [];
+          return us.some(function (row) {
+              return parseInt(String(row.site_id), 10) === sid;
+          });
+      });
+  }
+  function setupTransferPanelsVisibility() {
+      var ps = document.getElementById('transferPanelSupervisor');
+      var pde = document.getElementById('transferPanelDataEntry');
+      var phr = document.getElementById('transferPanelHR');
+      var padm = document.getElementById('transferPanelAdmin');
+      if (!ps || !pde || !phr) return;
+      ps.classList.add('hidden');
+      pde.classList.add('hidden');
+      phr.classList.add('hidden');
+      if (padm) padm.classList.add('hidden');
+      if (!CUR_USER) return;
+      if (CUR_USER.role === 'admin' && padm) padm.classList.remove('hidden');
+      else if (CUR_USER.role === 'supervisor') ps.classList.remove('hidden');
+      else if (CUR_USER.role === 'data_entry') pde.classList.remove('hidden');
+      else if (CUR_USER.role === 'hr') phr.classList.remove('hidden');
+  }
+  async function refreshTransferViews() {
+      setupTransferPanelsVisibility();
+      if (!CUR_USER) return;
+      if (CUR_USER.role === 'admin') await renderTransferAdminLists();
+      else if (CUR_USER.role === 'supervisor') {
+          await fillTransferFormSelects();
+          await renderTransferSupervisorLists();
+      } else if (CUR_USER.role === 'data_entry') await renderTransferDELists();
+      else if (CUR_USER.role === 'hr') await renderTransferHRLists();
+  }
+  async function fillTransferFormSelects() {
+      var ws = document.getElementById('transferWorkerSelect');
+      var ts = document.getElementById('transferToSiteSelect');
+      if (!ws || !ts) return;
+      var allowed = userAllowedSiteIds();
+      var q = sb
+          .from('workers')
+          .select('id, name, id_number, current_site_id')
+          .eq('is_active', true)
+          .or('is_deleted.eq.false,is_deleted.is.null')
+          .order('name');
+      if (allowed.length) q = q.in('current_site_id', allowed);
+      var res = await q;
+      var workers = res.data || [];
+      var wVal = ws.value;
+      ws.innerHTML =
+          '<option value="">اختر...</option>' +
+          workers
+              .map(function (w) {
+                  return '<option value="' + w.id + '">' + (w.name || '') + ' — ' + (w.id_number || '') + '</option>';
+              })
+              .join('');
+      if (wVal) ws.value = wVal;
+      var tVal = ts.value;
+      ts.innerHTML =
+          '<option value="">اختر...</option>' +
+          (SITES_CACHE || [])
+              .map(function (s) {
+                  return '<option value="' + s.id + '">' + s.name + '</option>';
+              })
+              .join('');
+      if (tVal) ts.value = tVal;
+      onTransferWorkerOrSiteChange();
+  }
+  async function onTransferWorkerOrSiteChange() {
+      var ts = document.getElementById('transferToSiteSelect');
+      var box = document.getElementById('transferDestSupervisorBox');
+      var namesEl = document.getElementById('transferDestSupervisorNames');
+      var pickWrap = document.getElementById('transferDestSupervisorPickWrap');
+      var pickSel = document.getElementById('transferDestSupervisorSelect');
+      if (!box || !namesEl || !pickWrap || !pickSel) return;
+      var toSite = ts && ts.value;
+      if (!toSite) {
+          box.style.display = 'none';
+          return;
+      }
+      var sups = await fetchSupervisorsForSite(toSite);
+      box.style.display = 'block';
+      if (sups.length === 0) {
+          namesEl.innerHTML =
+              '<span style="color:var(--red)">لا يوجد مشرف مرتبط بهذا الموقع — أضف ربطاً من شاشة المستخدمين أولاً.</span>';
+          pickWrap.classList.add('hidden');
+          pickSel.innerHTML = '';
+          return;
+      }
+      namesEl.innerHTML = sups
+          .map(function (s) {
+              return '<div>• ' + (s.full_name || '') + '</div>';
+          })
+          .join('');
+      if (sups.length === 1) {
+          pickWrap.classList.add('hidden');
+          pickSel.innerHTML =
+              '<option value="' + sups[0].id + '" selected>' + (sups[0].full_name || '') + '</option>';
+          pickSel.value = String(sups[0].id);
+      } else {
+          pickWrap.classList.remove('hidden');
+          pickSel.innerHTML = sups
+              .map(function (s) {
+                  return '<option value="' + s.id + '">' + (s.full_name || '') + '</option>';
+              })
+              .join('');
+      }
+  }
+  async function submitWorkerTransferRequest() {
+      if (!CUR_USER || CUR_USER.role !== 'supervisor') return;
+      var ws = document.getElementById('transferWorkerSelect');
+      var ts = document.getElementById('transferToSiteSelect');
+      var pickSel = document.getElementById('transferDestSupervisorSelect');
+      var conf = document.getElementById('transferConfirmSupervisor');
+      var wid = ws && ws.value;
+      var toSid = ts && ts.value;
+      if (!wid || !toSid) return showToast('اختر الموظف والموقع الجديد', 'error');
+      if (!conf || !conf.checked) return showToast('يجب تأكيد مشرف الموقع المستهدف', 'error');
+      var destSupId = pickSel && pickSel.value;
+      if (!destSupId) return showToast('تعذر تحديد مشرف الموقع المستهدف — انتظر حتى يظهر اسم المشرف ثم أعد المحاولة', 'error');
+      showLoad(true, 'جاري إرسال الطلب...');
+      try {
+          var wRes = await sb.from('workers').select('id, current_site_id, name').eq('id', wid).single();
+          if (wRes.error || !wRes.data) {
+              transferFlowError('تعذر جلب بيانات الموظف', wRes.error);
+              return;
+          }
+          var w = wRes.data;
+          if (w.current_site_id == null || w.current_site_id === '') {
+              showToast('الموظف بدون موقع حالي — عيّن الموقع من شاشة الموظفين أولاً', 'error');
+              return;
+          }
+          if (!isSiteAllowedForCurrentUser(w.current_site_id)) {
+              showToast('الموظف ليس ضمن مواقعك', 'error');
+              return;
+          }
+          if (String(w.current_site_id) === String(toSid)) {
+              showToast('الموقع الجديد مطابق للحالي', 'error');
+              return;
+          }
+          var pend = await sb
+              .from('worker_transfer_requests')
+              .select('id')
+              .eq('worker_id', wid)
+              .in('status', ['pending_destination', 'pending_data_entry', 'pending_hr']);
+          if (pend.error) {
+              transferFlowError('تعذر التحقق من الطلبات السابقة', pend.error);
+              return;
+          }
+          if (pend.data && pend.data.length > 0) {
+              showToast('يوجد طلب نقل قائم لهذا الموظف', 'error');
+              return;
+          }
+          var ins = await sb.from('worker_transfer_requests').insert({
+              worker_id: parseInt(wid, 10),
+              from_site_id: w.current_site_id,
+              to_site_id: parseInt(toSid, 10),
+              status: 'pending_destination',
+              initiator_user_id: CUR_USER.id,
+              destination_supervisor_user_id: parseInt(destSupId, 10),
+              updated_at: new Date().toISOString()
+          });
+          if (ins.error) {
+              transferFlowError('تعذر حفظ طلب النقل', ins.error);
+              return;
+          }
+          showToast('تم إرسال طلب النقل');
+          if (conf) conf.checked = false;
+          await refreshTransferViews();
+      } catch (e) {
+          console.error('submitWorkerTransferRequest', e);
+          showToast('حدث خطأ أثناء الإرسال — حدّث الصفحة وحاول مرة أخرى', 'error');
+      } finally {
+          showLoad(false);
+      }
+  }
+  function openTransferReject(requestId, step) {
+      document.getElementById('transferRejectRequestId').value = requestId;
+      document.getElementById('transferRejectStep').value = step;
+      document.getElementById('transferRejectReasonInput').value = '';
+      document.getElementById('transferRejectModal').classList.add('open');
+  }
+  async function confirmTransferReject() {
+      var id = document.getElementById('transferRejectRequestId').value;
+      var step = document.getElementById('transferRejectStep').value;
+      var reason = (document.getElementById('transferRejectReasonInput').value || '').trim();
+      if (!reason) return showToast('اكتب سبب الرفض', 'error');
+      var now = new Date().toISOString();
+      var patch = { rejection_reason: reason, updated_at: now };
+      if (step === 'destination') patch.status = 'rejected_destination';
+      else if (step === 'data_entry') patch.status = 'rejected_data_entry';
+      else if (step === 'hr') patch.status = 'rejected_hr';
+      else return closeModal('transferRejectModal');
+      var up = await sb.from('worker_transfer_requests').update(patch).eq('id', id);
+      closeModal('transferRejectModal');
+      if (up.error) return transferFlowError('تعذر تسجيل الرفض', up.error);
+      showToast('تم تسجيل الرفض');
+      refreshTransferViews();
+  }
+  async function approveTransferDestination(requestId) {
+      var r = await sb.from('worker_transfer_requests').select('*').eq('id', requestId).single();
+      if (r.error || !r.data) return;
+      var row = r.data;
+      if (String(row.destination_supervisor_user_id) !== String(CUR_USER.id))
+          return showToast('ليس لديك صلاحية على هذا الطلب', 'error');
+      if (row.status !== 'pending_destination') return showToast('حالة الطلب لا تسمح بالموافقة', 'error');
+      var up = await sb
+          .from('worker_transfer_requests')
+          .update({ status: 'pending_data_entry', updated_at: new Date().toISOString() })
+          .eq('id', requestId);
+      if (up.error) return transferFlowError('تعذر حفظ الموافقة', up.error);
+      showToast('تمت الموافقة — أُرسل لمدخل البيانات');
+      refreshTransferViews();
+  }
+  async function approveTransferDataEntry(requestId) {
+      var r = await sb.from('worker_transfer_requests').select('*').eq('id', requestId).single();
+      if (r.error || !r.data) return;
+      if (r.data.status !== 'pending_data_entry') return showToast('حالة الطلب غير صحيحة', 'error');
+      var up = await sb
+          .from('worker_transfer_requests')
+          .update({
+              status: 'pending_hr',
+              data_entry_user_id: CUR_USER.id,
+              updated_at: new Date().toISOString()
+          })
+          .eq('id', requestId);
+      if (up.error) return transferFlowError('تعذر حفظ الموافقة', up.error);
+      showToast('تمت الموافقة — أُرسل للموارد البشرية');
+      refreshTransferViews();
+  }
+  async function hrSaveTransferAltSite(requestId) {
+      var pick = document.getElementById('hrTransferSitePick_' + requestId);
+      var siteId = pick && pick.value ? parseInt(pick.value, 10) : null;
+      if (!siteId) return showToast('اختر الموقع البديل', 'error');
+      var up = await sb
+          .from('worker_transfer_requests')
+          .update({ hr_final_site_id: siteId, updated_at: new Date().toISOString() })
+          .eq('id', requestId)
+          .eq('status', 'pending_hr');
+      if (up.error) return transferFlowError('تعذر حفظ الموقع البديل', up.error);
+      showToast('تم حفظ الموقع البديل — ثم اضغط «قبول وتنفيذ النقل»');
+      refreshTransferViews();
+  }
+  async function hrApproveTransfer(requestId) {
+      var pick = document.getElementById('hrTransferSitePick_' + requestId);
+      var sitePick = pick && pick.value ? parseInt(pick.value, 10) : null;
+      var r = await sb.from('worker_transfer_requests').select('*').eq('id', requestId).single();
+      if (r.error || !r.data) return;
+      var row = r.data;
+      if (row.status !== 'pending_hr') return showToast('حالة الطلب غير صحيحة', 'error');
+      var finalSite = sitePick || row.hr_final_site_id || row.to_site_id;
+      if (!finalSite) return showToast('اختر موقع النقل', 'error');
+      var wup = await sb.from('workers').update({ current_site_id: finalSite }).eq('id', row.worker_id);
+      if (wup.error) return transferFlowError('تعذر تحديث موقع الموظف', wup.error);
+      var tup = await sb
+          .from('worker_transfer_requests')
+          .update({
+              status: 'approved',
+              hr_final_site_id: finalSite,
+              updated_at: new Date().toISOString()
+          })
+          .eq('id', requestId);
+      if (tup.error) return transferFlowError('تعذر إغلاق طلب النقل بعد تحديث الموظف', tup.error);
+      showToast('تم تنفيذ نقل الموظف للموقع المحدد');
+      refreshTransferViews();
+  }
+  function assertAdminTransfer() {
+      return CUR_USER && CUR_USER.role === 'admin';
+  }
+  async function adminTransferSkipToDataEntry(requestId) {
+      if (!assertAdminTransfer()) return;
+      var r = await sb.from('worker_transfer_requests').select('*').eq('id', requestId).single();
+      if (r.error || !r.data) return;
+      if (r.data.status !== 'pending_destination') return showToast('التخطي متاح من مرحلة «بانتظار مشرف الوجهة» فقط', 'error');
+      var up = await sb
+          .from('worker_transfer_requests')
+          .update({ status: 'pending_data_entry', updated_at: new Date().toISOString() })
+          .eq('id', requestId);
+      if (up.error) return transferFlowError('تعذر التحديث', up.error);
+      showToast('تم تخطي مشرف الوجهة — الطلب عند مدخل البيانات');
+      refreshTransferViews();
+  }
+  async function adminTransferSkipToHR(requestId) {
+      if (!assertAdminTransfer()) return;
+      var r = await sb.from('worker_transfer_requests').select('*').eq('id', requestId).single();
+      if (r.error || !r.data) return;
+      var st = r.data.status;
+      if (st !== 'pending_destination' && st !== 'pending_data_entry')
+          return showToast('التخطي متاح من مرحلتي المشرف أو مدخل البيانات', 'error');
+      var up = await sb
+          .from('worker_transfer_requests')
+          .update({
+              status: 'pending_hr',
+              data_entry_user_id: r.data.data_entry_user_id != null ? r.data.data_entry_user_id : CUR_USER.id,
+              updated_at: new Date().toISOString()
+          })
+          .eq('id', requestId);
+      if (up.error) return transferFlowError('تعذر التحديث', up.error);
+      showToast('تم التخطي — الطلب عند الموارد البشرية');
+      refreshTransferViews();
+  }
+  async function adminTransferSaveAltSite(requestId) {
+      if (!assertAdminTransfer()) return;
+      var pick = document.getElementById('adminTransferSitePick_' + requestId);
+      var siteId = pick && pick.value ? parseInt(pick.value, 10) : null;
+      if (!siteId) return showToast('اختر الموقع من القائمة', 'error');
+      var up = await sb
+          .from('worker_transfer_requests')
+          .update({ hr_final_site_id: siteId, updated_at: new Date().toISOString() })
+          .eq('id', requestId)
+          .in('status', ['pending_destination', 'pending_data_entry', 'pending_hr']);
+      if (up.error) return transferFlowError('تعذر حفظ الموقع', up.error);
+      showToast('تم حفظ الموقع — ثم «تنفيذ النقل الآن» إن رغبت');
+      refreshTransferViews();
+  }
+  async function adminTransferExecuteNow(requestId) {
+      if (!assertAdminTransfer()) return;
+      var pick = document.getElementById('adminTransferSitePick_' + requestId);
+      var sitePick = pick && pick.value ? parseInt(pick.value, 10) : null;
+      var r = await sb.from('worker_transfer_requests').select('*').eq('id', requestId).single();
+      if (r.error || !r.data) return;
+      var row = r.data;
+      if (
+          row.status !== 'pending_destination' &&
+          row.status !== 'pending_data_entry' &&
+          row.status !== 'pending_hr'
+      ) {
+          return showToast('لا يمكن تنفيذ نقل من حالة هذا الطلب', 'error');
+      }
+      var finalSite = sitePick || row.hr_final_site_id || row.to_site_id;
+      if (!finalSite) return showToast('اختر موقع النقل', 'error');
+      var wup = await sb.from('workers').update({ current_site_id: finalSite }).eq('id', row.worker_id);
+      if (wup.error) return transferFlowError('تعذر تحديث موقع الموظف', wup.error);
+      var tup = await sb
+          .from('worker_transfer_requests')
+          .update({
+              status: 'approved',
+              hr_final_site_id: finalSite,
+              updated_at: new Date().toISOString()
+          })
+          .eq('id', requestId);
+      if (tup.error) return transferFlowError('تعذر إغلاق الطلب', tup.error);
+      showToast('تم تنفيذ النقل (اعتماد مدير النظام)');
+      refreshTransferViews();
+  }
+  async function renderTransferAdminLists() {
+      var sel = '*, workers(name, id_number, current_site_id)';
+      var pen = await sb
+          .from('worker_transfer_requests')
+          .select(sel)
+          .in('status', ['pending_destination', 'pending_data_entry', 'pending_hr'])
+          .order('created_at', { ascending: false });
+      var pEl = document.getElementById('transferAdminPendingList');
+      if (pEl)
+          pEl.innerHTML = renderTransferRequestCards(pen.data || [], {
+              mode: 'admin_pending',
+              showActions: true
+          });
+  }
+  function transferNotifyFilter(row, me) {
+      if (row.status === 'rejected_destination' && row.initiator_user_id === me) return true;
+      if (row.status === 'rejected_data_entry' && (row.initiator_user_id === me || row.destination_supervisor_user_id === me))
+          return true;
+      if (
+          row.status === 'rejected_hr' &&
+          (row.initiator_user_id === me || row.destination_supervisor_user_id === me || row.data_entry_user_id === me)
+      )
+          return true;
+      return false;
+  }
+  async function renderTransferSupervisorLists() {
+      var me = CUR_USER.id;
+      var sel = '*, workers(name, id_number, current_site_id)';
+      var my = await sb.from('worker_transfer_requests').select(sel).eq('initiator_user_id', me).order('created_at', { ascending: false }).limit(40);
+      var pending = await sb
+          .from('worker_transfer_requests')
+          .select(sel)
+          .eq('destination_supervisor_user_id', me)
+          .eq('status', 'pending_destination')
+          .order('created_at', { ascending: false });
+      var nf = await sb
+          .from('worker_transfer_requests')
+          .select(sel)
+          .or('initiator_user_id.eq.' + me + ',destination_supervisor_user_id.eq.' + me + ',data_entry_user_id.eq.' + me)
+          .order('updated_at', { ascending: false })
+          .limit(80);
+      var myEl = document.getElementById('transferMyRequestsList');
+      var pEl = document.getElementById('transferPendingDestList');
+      var nEl = document.getElementById('transferSupervisorNotifyList');
+      if (myEl)
+          myEl.innerHTML = renderTransferRequestCards(my.data || [], { mode: 'my' });
+      if (pEl)
+          pEl.innerHTML = renderTransferRequestCards(pending.data || [], {
+              mode: 'pending_dest',
+              showActions: true
+          });
+      var notes = (nf.data || []).filter(function (row) {
+          return transferNotifyFilter(row, me);
+      });
+      if (nEl) nEl.innerHTML = renderTransferRequestCards(notes, { mode: 'notify' });
+  }
+  async function renderTransferDELists() {
+      var me = CUR_USER.id;
+      var sel = '*, workers(name, id_number, current_site_id)';
+      var pen = await sb.from('worker_transfer_requests').select(sel).eq('status', 'pending_data_entry').order('created_at', { ascending: false });
+      var nf = await sb.from('worker_transfer_requests').select(sel).eq('data_entry_user_id', me).eq('status', 'rejected_hr').order('updated_at', { ascending: false }).limit(40);
+      var pEl = document.getElementById('transferDEpendingList');
+      var nEl = document.getElementById('transferDENotifyList');
+      if (pEl)
+          pEl.innerHTML = renderTransferRequestCards(pen.data || [], {
+              mode: 'de_pending',
+              showActions: true
+          });
+      if (nEl) nEl.innerHTML = renderTransferRequestCards(nf.data || [], { mode: 'notify' });
+  }
+  async function renderTransferHRLists() {
+      var sel = '*, workers(name, id_number, current_site_id)';
+      var pen = await sb.from('worker_transfer_requests').select(sel).eq('status', 'pending_hr').order('created_at', { ascending: false });
+      var pEl = document.getElementById('transferHRpendingList');
+      if (pEl) pEl.innerHTML = renderTransferRequestCards(pen.data || [], { mode: 'hr_pending', showActions: true });
+  }
+  function renderTransferRequestCards(rows, opts) {
+      opts = opts || {};
+      if (!rows.length)
+          return '<p style="color:var(--text-light); text-align:center;">لا توجد بيانات</p>';
+      return rows
+          .map(function (row) {
+              var w = row.workers || {};
+              var st = transferStatusLabel(row.status);
+              var reason =
+                  row.rejection_reason && (row.status || '').indexOf('rejected') !== -1
+                      ? '<div style="margin-top:8px; color:var(--red);"><b>السبب:</b> ' +
+                        String(row.rejection_reason).replace(/</g, '&lt;') +
+                        '</div>'
+                      : '';
+              var sites =
+                  '<div style="font-size:0.9rem; color:var(--text-light); margin-top:6px;">من: ' +
+                  siteNameByIdForTransfer(row.from_site_id) +
+                  ' → إلى: ' +
+                  siteNameByIdForTransfer(row.to_site_id) +
+                  (row.hr_final_site_id
+                      ? ' <br><span style="color:var(--orange)">موقع بديل محفوظ (HR): ' +
+                        siteNameByIdForTransfer(row.hr_final_site_id) +
+                        '</span>'
+                      : '') +
+                  '</div>';
+              var head =
+                  '<div class="card" style="padding:15px; margin-bottom:12px;"><b>' +
+                  (w.name || 'موظف') +
+                  '</b> <small style="color:var(--text-light);">' +
+                  (w.id_number || '') +
+                  '</small><div style="margin-top:6px;"><span class="badge bg-orange">' +
+                  st +
+                  '</span></div>' +
+                  sites +
+                  reason;
+              var actions = '';
+              if (opts.showActions) {
+                  if (opts.mode === 'pending_dest') {
+                      actions =
+                          '<div class="flex-row" style="margin-top:12px; gap:8px; flex-wrap:wrap;">' +
+                          '<button type="button" class="btn btn-sm btn-green" style="width:auto;" onclick="approveTransferDestination(' +
+                          row.id +
+                          ')">قبول</button>' +
+                          '<button type="button" class="btn btn-sm btn-red" style="width:auto;" onclick="openTransferReject(' +
+                          row.id +
+                          ',\'destination\')">رفض</button></div>';
+                  } else if (opts.mode === 'de_pending') {
+                      actions =
+                          '<div class="flex-row" style="margin-top:12px; gap:8px; flex-wrap:wrap;">' +
+                          '<button type="button" class="btn btn-sm btn-green" style="width:auto;" onclick="approveTransferDataEntry(' +
+                          row.id +
+                          ')">قبول</button>' +
+                          '<button type="button" class="btn btn-sm btn-red" style="width:auto;" onclick="openTransferReject(' +
+                          row.id +
+                          ',\'data_entry\')">رفض</button></div>';
+                  } else if (opts.mode === 'hr_pending') {
+                      var defSite = row.hr_final_site_id != null ? row.hr_final_site_id : row.to_site_id;
+                      var optsSites = (SITES_CACHE || [])
+                          .map(function (s) {
+                              var sel = String(s.id) === String(defSite) ? ' selected' : '';
+                              return '<option value="' + s.id + '"' + sel + '>' + s.name + '</option>';
+                          })
+                          .join('');
+                      actions =
+                          '<div style="margin-top:12px;"><label class="input-label-secondary">موقع تنفيذ النقل</label><select id="hrTransferSitePick_' +
+                          row.id +
+                          '">' +
+                          optsSites +
+                          '</select></div>' +
+                          '<div class="flex-row" style="margin-top:12px; gap:8px; flex-wrap:wrap;">' +
+                          '<button type="button" class="btn btn-sm btn-green" style="width:auto;" onclick="hrApproveTransfer(' +
+                          row.id +
+                          ')">قبول وتنفيذ النقل</button>' +
+                          '<button type="button" class="btn btn-sm btn-orange" style="width:auto;" onclick="hrSaveTransferAltSite(' +
+                          row.id +
+                          ')">حفظ موقع بديل</button>' +
+                          '<button type="button" class="btn btn-sm btn-red" style="width:auto;" onclick="openTransferReject(' +
+                          row.id +
+                          ',\'hr\')">رفض</button></div>';
+                  } else if (opts.mode === 'admin_pending') {
+                      var defAdm = row.hr_final_site_id != null ? row.hr_final_site_id : row.to_site_id;
+                      var optsAdm = (SITES_CACHE || [])
+                          .map(function (s) {
+                              var sel = String(s.id) === String(defAdm) ? ' selected' : '';
+                              return '<option value="' + s.id + '"' + sel + '>' + s.name + '</option>';
+                          })
+                          .join('');
+                      var skipDEbtn =
+                          row.status === 'pending_destination'
+                              ? '<button type="button" class="btn btn-sm btn-outline" style="width:auto;" onclick="adminTransferSkipToDataEntry(' +
+                                row.id +
+                                ')">تخطي مشرف الوجهة ← مدخل بيانات</button>'
+                              : '';
+                      var skipHRbtn =
+                          row.status === 'pending_destination' || row.status === 'pending_data_entry'
+                              ? '<button type="button" class="btn btn-sm btn-outline" style="width:auto;" onclick="adminTransferSkipToHR(' +
+                                row.id +
+                                ')">تخطي ← موارد بشرية</button>'
+                              : '';
+                      actions =
+                          '<div style="margin-top:12px;"><label class="input-label-secondary">موقع تنفيذ النقل</label><select id="adminTransferSitePick_' +
+                          row.id +
+                          '">' +
+                          optsAdm +
+                          '</select></div>' +
+                          '<div class="flex-row" style="margin-top:12px; gap:8px; flex-wrap:wrap;">' +
+                          skipDEbtn +
+                          skipHRbtn +
+                          '<button type="button" class="btn btn-sm btn-green" style="width:auto;" onclick="adminTransferExecuteNow(' +
+                          row.id +
+                          ')">تنفيذ النقل الآن</button>' +
+                          '<button type="button" class="btn btn-sm btn-orange" style="width:auto;" onclick="adminTransferSaveAltSite(' +
+                          row.id +
+                          ')">حفظ كموقع بديل</button>' +
+                          '<button type="button" class="btn btn-sm btn-red" style="width:auto;" onclick="openTransferReject(' +
+                          row.id +
+                          ',\'hr\')">رفض الطلب</button></div>';
+                  }
+              }
+              return head + actions + '</div>';
+          })
+          .join('');
   }
 
   // حفظ/استعادة فلاتر الموظفين في LocalStorage
@@ -1491,20 +2158,22 @@
       injectShowDeletedWorkersCheckbox();
       const r = CUR_USER.role;
       if(r === 'admin') {
-          ['dashboard','workers','sites','contractors','attendance','approval','reports','corrections','users','roles'].forEach(id => {
+          ['dashboard','workers','sites','contractors','attendance','approval','reports','corrections','users','roles','transfers'].forEach(id => {
               document.getElementById('n-'+id)?.classList.remove('hidden');
           });
           nav('dashboard');
       } else if(r === 'hr') {
-          ['workers','sites','reports'].forEach(id => document.getElementById('n-'+id)?.classList.remove('hidden'));
+          ['workers','sites','reports','transfers'].forEach(id => document.getElementById('n-'+id)?.classList.remove('hidden'));
           const repType = document.getElementById('repType');
           repType.innerHTML = `<option value="attendance_log">📅 سجل الحضور والانصراف</option><option value="workers">👷 قاعدة بيانات الموظفين</option>`;
           nav('workers');
       } else if(r === 'supervisor') {
           document.getElementById('n-attendance')?.classList.remove('hidden');
+          document.getElementById('n-transfers')?.classList.remove('hidden');
           nav('attendance');
       } else if(r === 'data_entry') {
           document.getElementById('n-approval')?.classList.remove('hidden');
+          document.getElementById('n-transfers')?.classList.remove('hidden');
           nav('approval');
       }
       refreshAttendanceExcelUploadUI();
