@@ -447,6 +447,19 @@
   </div>
 </div>
 
+<div id="directHireRejectModal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>سبب الرفض — إشعار مباشر</h3>
+    <input type="hidden" id="directHireRejectRequestId">
+    <input type="hidden" id="directHireRejectStep">
+    <textarea id="directHireRejectReasonInput" rows="4" placeholder="اكتب السبب..." style="width:100%; margin-bottom:15px; font-family:Tajawal,sans-serif;"></textarea>
+    <div class="flex-row" style="gap:10px;">
+      <button type="button" class="btn btn-red" style="width:auto;" onclick="confirmDirectHireReject()">تأكيد الرفض</button>
+      <button type="button" class="btn btn-outline" style="width:auto;" onclick="closeModal('directHireRejectModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <div id="bulkAttendanceModal" class="modal-overlay">
   <div class="modal-box">
     <h3>تسجيل حضور مجموعة</h3>
@@ -490,6 +503,7 @@
     <button onclick="nav('attendance')" id="n-attendance" class="nav-btn hidden"><i class="fa-solid fa-clipboard-user"></i> تسجيل الحضور</button>
     <button onclick="nav('approval')" id="n-approval" class="nav-btn hidden"><i class="fa-solid fa-clipboard-check"></i> اعتماد الحضور</button>
     <button onclick="nav('transfers')" id="n-transfers" class="nav-btn hidden"><i class="fa-solid fa-right-left"></i> نقل الموظفين</button>
+    <button onclick="nav('direct-hire')" id="n-direct-hire" class="nav-btn hidden"><i class="fa-solid fa-user-plus"></i> إشعار مباشر</button>
     <button onclick="nav('reports')" id="n-reports" class="nav-btn hidden"><i class="fa-solid fa-chart-pie"></i> التقارير</button>
     <button onclick="nav('corrections')" id="n-corrections" class="nav-btn hidden"><i class="fa-solid fa-pen-to-square"></i> طلبات التعديل</button>
     <button onclick="nav('users')" id="n-users" class="nav-btn hidden"><i class="fa-solid fa-user-shield"></i> المستخدمين</button>
@@ -592,9 +606,9 @@
     </div>
 
     <div id="v-workers" class="view-section hidden">
-       <div class="sub-tabs">
-          <div class="sub-tab active" onclick="switchTab('list')">قائمة الموظفين</div>
-          <div class="sub-tab" onclick="switchTab('add')">إضافة موظف جديد</div>
+          <div class="sub-tabs">
+          <div class="sub-tab active" id="workersTabList" onclick="switchTab('list')">قائمة الموظفين</div>
+          <div class="sub-tab" id="workersTabAdd" onclick="switchTab('add')">إضافة موظف جديد</div>
        </div>
 
        <div id="hr-list-view" class="card" style="border-radius:0 0 12px 12px;">
@@ -902,6 +916,60 @@
       </div>
     </div>
 
+    <div id="v-direct-hire" class="view-section hidden">
+      <div id="directHirePanelSupervisor" class="hidden">
+        <div class="grid-2" style="align-items:start;">
+          <div class="card">
+            <h3 style="margin-top:0;"><i class="fa-solid fa-bell"></i> إشعار مباشر — طلب تعيين</h3>
+            <p style="color:var(--text-light); font-size:0.9rem;">نفس بيانات إضافة موظف جديد، مع <b>تاريخ أول يوم عمل</b>. يُرسل إشعار لمدخل البيانات ثم طلب للموارد البشرية للاعتماد وتسجيل الموظف.</p>
+            <div class="grid-2">
+              <div><label class="input-label-secondary">الاسم الرباعي</label><input type="text" id="dhNewName"></div>
+              <div><label class="input-label-secondary">رقم الهوية / الإقامة / الجواز</label><input type="text" id="dhNewIqama" placeholder="بدون تكرار لموظف قائم"></div>
+            </div>
+            <div class="grid-3">
+              <div><label class="input-label-secondary">المقاول التابع له</label><select id="dhNewCont"><option value="">اختر...</option></select></div>
+              <div><label class="input-label-secondary">موقع العمل</label><select id="dhNewSite"><option value="">اختر...</option></select></div>
+              <div><label class="input-label-secondary">المشرف المباشر</label><select id="dhNewSuper"><option value="">اختر...</option></select></div>
+            </div>
+            <div class="grid-2">
+              <div><label class="input-label-secondary">نظام الدفع</label><select id="dhNewType"><option value="salary">راتب شهري</option><option value="daily">يومية</option></select></div>
+              <div><label class="input-label-secondary">المبلغ المتفق عليه</label><input type="number" id="dhNewAmt"></div>
+            </div>
+            <div class="grid-2">
+              <div><label class="input-label-secondary">تاريخ انتهاء الإقامة</label><input type="date" id="dhNewIqamaExpiry"></div>
+              <div><label class="input-label-secondary">تاريخ أول يوم عمل</label><input type="date" id="dhNewFirstDay"></div>
+            </div>
+            <button type="button" onclick="submitDirectHireRequest()" class="btn btn-gold" style="max-width:260px; margin-top:12px;">إرسال الإشعار والطلب</button>
+          </div>
+          <div class="card">
+            <h3 style="margin-top:0;">طلباتي</h3>
+            <div id="directHireSupervisorMyList"></div>
+          </div>
+        </div>
+      </div>
+      <div id="directHirePanelDataEntry" class="hidden">
+        <div class="card">
+          <h3 style="margin-top:0;"><i class="fa-solid fa-inbox"></i> إشعارات التعيين — مدخل بيانات</h3>
+          <p style="color:var(--text-light); font-size:0.9rem;">عرض الطلبات الواردة من المشرفين. بعد الاطلاع أرسل الطلب إلى الموارد البشرية للاعتماد النهائي.</p>
+          <div id="directHireDEpendingList"></div>
+        </div>
+      </div>
+      <div id="directHirePanelHR" class="hidden">
+        <div class="card">
+          <h3 style="margin-top:0;"><i class="fa-solid fa-user-check"></i> طلبات التعيين — موارد بشرية</h3>
+          <p style="color:var(--text-light); font-size:0.88rem;">راجع البيانات، عدّل إن لزم، ثم وافق لتسجيل الموظف فوراً في النظام.</p>
+          <div id="directHireHRpendingList"></div>
+        </div>
+      </div>
+      <div id="directHirePanelAdmin" class="hidden">
+        <div class="card">
+          <h3 style="margin-top:0;"><i class="fa-solid fa-user-shield"></i> إشعار مباشر — مدير النظام</h3>
+          <p style="color:var(--text-light); font-size:0.88rem;">متابعة كامل السير من البداية للنهاية؛ يمكنك الموافقة وتسجيل الموظف من أي مرحلة، أو تخطي مدخل البيانات إلى الموارد البشرية.</p>
+          <div id="directHireAdminList"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="v-reports" class="view-section hidden">
       <div class="card" style="max-width:800px; margin:0 auto;">
         <h3>استخراج التقارير</h3>
@@ -961,7 +1029,7 @@
     <div id="v-roles" class="view-section hidden">
        <div class="card">
            <h3><i class="fa-solid fa-shield-halved"></i> الأدوار والصلاحيات</h3>
-           <p style="color:var(--text-light); margin-bottom:20px;">اضغط على الصلاحيات لتفعيل/تعطيل كل دور (يتم الحفظ تلقائياً)</p>
+           <p style="color:var(--text-light); margin-bottom:20px;">اضغط على الصلاحيات لتفعيل/تعطيل كل دور. مع جدول <code>hr_role_permissions</code> (أنشئه من ملف <code>supabase_hr_role_permissions.sql</code> في Supabase) يُحفظ الإعداد للجميع؛ بدون الجدول تُطبَّق القيم الافتراضية عند كل تسجيل دخول.</p>
            
            <div style="overflow-x:auto;">
                <table class="roles-table" id="rolesTable">
@@ -969,12 +1037,21 @@
                        <tr>
                            <th>الدور</th>
                            <th>الوصف</th>
-                           <th>إدارة العمال</th>
-                           <th>إدارة المواقع</th>
-                           <th>تسجيل الحضور</th>
-                           <th>اعتماد الحضور</th>
-                           <th>التقارير</th>
-                           <th>إدارة المستخدمين</th>
+                           <th title="الوصول لصفحة الموظفين">عمال (صفحة)</th>
+                           <th title="إضافة / استيراد">إضافة</th>
+                           <th title="تعديل البيانات">تعديل</th>
+                           <th title="تفعيل وإيقاف">نشط</th>
+                           <th>المواقع</th>
+                           <th>الحضور</th>
+                           <th>الاعتماد</th>
+                           <th title="تفعيل قسم التقارير">تقارير</th>
+                           <th>مسير رواتب</th>
+                           <th>سجل حضور</th>
+                           <th>بيانات عمال</th>
+                           <th>مستخلص مقاولين</th>
+                           <th>المستخدمين</th>
+                           <th>النقل</th>
+                           <th title="إشعار مباشر / تعيين عبر المشرف">إشعار مباشر</th>
                        </tr>
                    </thead>
                    <tbody id="rolesTableBody"></tbody>
@@ -1084,13 +1161,148 @@
   let ALL_PENDING_WORKERS = [];
   let ALL_ATTENDANCE_LOADED = false;
   
-  // Role permissions cache
-  let ROLE_PERMISSIONS = {
-      admin: { workers: true, sites: true, attendance: true, approval: true, reports: true, users: true },
-      hr: { workers: true, sites: true, attendance: false, approval: false, reports: true, users: false },
-      supervisor: { workers: false, sites: false, attendance: true, approval: false, reports: false, users: false },
-      data_entry: { workers: false, sites: false, attendance: false, approval: true, reports: false, users: false }
+  // Role permissions — القيم الافتراضية (تُدمج مع جدول hr_role_permissions إن وُجد)
+  const DEFAULT_ROLE_PERMISSIONS = {
+      admin: {
+          workers: true, workers_add: true, workers_edit: true, workers_toggle_active: true,
+          sites: true, attendance: true, approval: true, reports: true,
+          report_payroll: true, report_attendance_log: true, report_workers: true, report_contractor_invoice: true,
+          users: true, transfers: true, direct_hire: true
+      },
+      hr: {
+          workers: true, workers_add: true, workers_edit: true, workers_toggle_active: true,
+          sites: true, attendance: false, approval: false, reports: true,
+          report_payroll: true, report_attendance_log: true, report_workers: true, report_contractor_invoice: true,
+          users: false, transfers: true, direct_hire: true
+      },
+      supervisor: {
+          workers: false, workers_add: false, workers_edit: false, workers_toggle_active: false,
+          sites: false, attendance: true, approval: false, reports: false,
+          report_payroll: false, report_attendance_log: false, report_workers: false, report_contractor_invoice: false,
+          users: false, transfers: true, direct_hire: true
+      },
+      data_entry: {
+          workers: false, workers_add: false, workers_edit: false, workers_toggle_active: false,
+          sites: false, attendance: false, approval: true, reports: false,
+          report_payroll: false, report_attendance_log: false, report_workers: false, report_contractor_invoice: false,
+          users: false, transfers: true, direct_hire: true
+      }
   };
+  const ROLE_PERMISSION_COLUMN_KEYS = [
+      'workers', 'workers_add', 'workers_edit', 'workers_toggle_active',
+      'sites', 'attendance', 'approval', 'reports',
+      'report_payroll', 'report_attendance_log', 'report_workers', 'report_contractor_invoice',
+      'users', 'transfers', 'direct_hire'
+  ];
+  const REPORT_TYPE_PERMISSION = {
+      payroll: 'report_payroll',
+      contractor_invoice: 'report_contractor_invoice',
+      attendance_log: 'report_attendance_log',
+      workers: 'report_workers'
+  };
+  let ROLE_PERMISSIONS = {};
+
+  function resetRolePermissionsFromDefaults() {
+      ROLE_PERMISSIONS = JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
+  }
+
+  async function loadRolePermissionsFromDb() {
+      try {
+          const res = await sb.from('hr_role_permissions').select('role, permissions');
+          if (res.error) {
+              var msg = String(res.error.message || res.error.code || '');
+              if (msg.indexOf('does not exist') !== -1 || res.error.code === '42P01' || res.error.code === 'PGRST205') return;
+              console.warn('hr_role_permissions', res.error);
+              return;
+          }
+          (res.data || []).forEach(function (row) {
+              if (!row.role || !ROLE_PERMISSIONS[row.role] || !row.permissions || typeof row.permissions !== 'object') return;
+              Object.assign(ROLE_PERMISSIONS[row.role], row.permissions);
+          });
+      } catch (e) {
+          console.warn('loadRolePermissionsFromDb', e);
+      }
+  }
+
+  async function persistRolePermissions(role) {
+      if (!CUR_USER || CUR_USER.role !== 'admin' || role === 'admin') return;
+      try {
+          const payload = { role: role, permissions: ROLE_PERMISSIONS[role] };
+          const up = await sb.from('hr_role_permissions').upsert(payload, { onConflict: 'role' });
+          if (up.error) console.warn('persistRolePermissions', up.error);
+      } catch (e) {
+          console.warn('persistRolePermissions', e);
+      }
+  }
+
+  async function initRolePermissions() {
+      resetRolePermissionsFromDefaults();
+      await loadRolePermissionsFromDb();
+  }
+
+  function permissionGranted(role, permission) {
+      const p = ROLE_PERMISSIONS[role];
+      if (!p) return false;
+      const wSub = ['workers_add', 'workers_edit', 'workers_toggle_active'];
+      const rSub = ['report_payroll', 'report_attendance_log', 'report_workers', 'report_contractor_invoice'];
+      if (permission === 'workers') {
+          if (p.workers === true) return true;
+          return wSub.some(function (k) { return p[k] === true; });
+      }
+      if (permission === 'reports') {
+          if (p.reports === true) return true;
+          return rSub.some(function (k) { return p[k] === true; });
+      }
+      if (wSub.indexOf(permission) !== -1) {
+          if (p[permission] === false) return false;
+          if (p[permission] === true) return true;
+          return !!p.workers;
+      }
+      if (rSub.indexOf(permission) !== -1) {
+          if (p[permission] === false) return false;
+          if (p[permission] === true) return true;
+          return !!p.reports;
+      }
+      return !!p[permission];
+  }
+
+  function hasPermission(permission) {
+      if (!CUR_USER) return false;
+      if (CUR_USER.role === 'admin') return true;
+      return permissionGranted(CUR_USER.role, permission);
+  }
+
+  function applyReportTypeSelectOptions() {
+      const sel = document.getElementById('repType');
+      if (!sel) return;
+      const opts = [
+          { v: 'payroll', label: '💰 مسير الرواتب (تفصيلي)', p: 'report_payroll' },
+          { v: 'contractor_invoice', label: '🧾 مستخلص المقاولين', p: 'report_contractor_invoice' },
+          { v: 'attendance_log', label: '📅 سجل الحضور والانصراف', p: 'report_attendance_log' },
+          { v: 'workers', label: '👷 قاعدة بيانات الموظفين', p: 'report_workers' }
+      ];
+      const allowed = opts.filter(function (o) { return hasPermission(o.p); });
+      if (allowed.length === 0) {
+          sel.innerHTML = '<option value="">— لا توجد تقارير مسموحة لهذا الدور —</option>';
+          return;
+      }
+      sel.innerHTML = allowed.map(function (o) { return '<option value="' + o.v + '">' + o.label + '</option>'; }).join('');
+      updateReportOptions();
+  }
+
+  function refreshGranularWorkersNavUi() {
+      const tabAdd = document.getElementById('workersTabAdd');
+      if (tabAdd) tabAdd.classList.toggle('hidden', !hasPermission('workers_add'));
+      if (!hasPermission('workers_add')) {
+          const addView = document.getElementById('hr-add-view');
+          const listView = document.getElementById('hr-list-view');
+          if (addView && listView && !addView.classList.contains('hidden')) {
+              switchTab('list');
+          }
+      }
+  }
+
+  resetRolePermissionsFromDefaults();
   
   // Dashboard chart instance
   let attendanceChart = null;
@@ -1104,7 +1316,9 @@
   }
 
   function checkPermission(permission) {
-      if(!ROLE_PERMISSIONS[CUR_USER.role][permission]) {
+      if (!CUR_USER) return false;
+      if (CUR_USER.role === 'admin') return true;
+      if (!permissionGranted(CUR_USER.role, permission)) {
           showToast('لا تملك صلاحية الوصول لهذا الإجراء', 'error');
           return false;
       }
@@ -1262,12 +1476,14 @@
       document.getElementById('breadcrumbCurrent').innerText = btn ? btn.innerText.trim() : '';
       
       if(v === 'dashboard') loadDashboard();
-      if(v === 'workers') { loadFiltersFromStorage(); loadWorkersPageGlobalStats(); }
+      if(v === 'reports') applyReportTypeSelectOptions();
+      if(v === 'workers') { loadFiltersFromStorage(); loadWorkersPageGlobalStats(); refreshGranularWorkersNavUi(); }
       if(v === 'attendance') { initAttendanceFilters(); loadAttendanceRegister(); }
       if(v === 'approval') { initApprovalFilters(); loadPendingApproval(); }
       if(v === 'corrections') loadCorrections();
       if(v === 'roles') loadRoles();
       if(v === 'transfers') refreshTransferViews();
+      if(v === 'direct-hire') refreshDirectHireViews();
   }
 
   // ---------- طلبات نقل الموظفين بين المواقع (جدول worker_transfer_requests) ----------
@@ -1855,6 +2071,564 @@
           .join('');
   }
 
+  // ---------- إشعار مباشر (direct_hire_requests) ----------
+  var DIRECT_HIRE_STATUS_LABEL = {
+      pending_data_entry: 'بانتظار مدخل البيانات (إشعار)',
+      rejected_data_entry: 'مرفوض من مدخل البيانات',
+      pending_hr: 'بانتظار الموارد البشرية',
+      rejected_hr: 'مرفوض من الموارد البشرية',
+      approved: 'تم تسجيل الموظف'
+  };
+  function directHireStatusLabel(st) {
+      return DIRECT_HIRE_STATUS_LABEL[st] || st;
+  }
+  function dhHtmlText(s) {
+      if (s == null) return '';
+      return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+  }
+  function dhAttr(s) {
+      if (s == null) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  }
+  function setupDirectHirePanelsVisibility() {
+      var ps = document.getElementById('directHirePanelSupervisor');
+      var pde = document.getElementById('directHirePanelDataEntry');
+      var phr = document.getElementById('directHirePanelHR');
+      var padm = document.getElementById('directHirePanelAdmin');
+      if (!ps || !pde || !phr) return;
+      ps.classList.add('hidden');
+      pde.classList.add('hidden');
+      phr.classList.add('hidden');
+      if (padm) padm.classList.add('hidden');
+      if (!CUR_USER) return;
+      if (CUR_USER.role === 'admin' && padm) padm.classList.remove('hidden');
+      else if (CUR_USER.role === 'supervisor') ps.classList.remove('hidden');
+      else if (CUR_USER.role === 'data_entry') pde.classList.remove('hidden');
+      else if (CUR_USER.role === 'hr') phr.classList.remove('hidden');
+  }
+  async function refreshDirectHireViews() {
+      setupDirectHirePanelsVisibility();
+      if (!CUR_USER) return;
+      try {
+          if (CUR_USER.role === 'admin') await renderDirectHireAdminLists();
+          else if (CUR_USER.role === 'supervisor') await renderDirectHireSupervisorPanel();
+          else if (CUR_USER.role === 'data_entry') await renderDirectHireDELists();
+          else if (CUR_USER.role === 'hr') await renderDirectHireHRLists();
+      } catch (e) {
+          console.error('refreshDirectHireViews', e);
+      }
+  }
+  function readDirectHirePayloadFromDom(requestId) {
+      var p = String(requestId);
+      function val(suffix) {
+          var el = document.getElementById('dhfld_' + p + '_' + suffix);
+          return el ? el.value : '';
+      }
+      return {
+          name: (val('name') || '').trim(),
+          id_number: (val('id_number') || '').trim(),
+          contractor_id: val('contractor') || null,
+          current_site_id: val('site') || null,
+          assigned_supervisor_id: val('supervisor') || null,
+          payment_type: val('payment_type') || 'salary',
+          basic_salary: val('salary') || null,
+          iqama_expiry: val('iqama_expiry') || null,
+          first_day_work: val('first_day') || null
+      };
+  }
+  function dhSiteOptionsHtml(selected) {
+      var sel = selected == null ? '' : String(selected);
+      return (
+          '<option value="">اختر...</option>' +
+          (SITES_CACHE || [])
+              .map(function (s) {
+                  return (
+                      '<option value="' +
+                      s.id +
+                      '"' +
+                      (String(s.id) === sel ? ' selected' : '') +
+                      '>' +
+                      dhHtmlText(s.name) +
+                      '</option>'
+                  );
+              })
+              .join('')
+      );
+  }
+  function dhContOptionsHtml(selected) {
+      var sel = selected == null ? '' : String(selected);
+      return (
+          '<option value="">اختر...</option>' +
+          (CONTS_CACHE || [])
+              .map(function (c) {
+                  return (
+                      '<option value="' +
+                      c.id +
+                      '"' +
+                      (String(c.id) === sel ? ' selected' : '') +
+                      '>' +
+                      dhHtmlText(c.name) +
+                      '</option>'
+                  );
+              })
+              .join('')
+      );
+  }
+  function dhSuperOptionsHtml(selected, supers) {
+      var sel = selected == null ? '' : String(selected);
+      var list = supers || [];
+      return (
+          '<option value="">اختر...</option>' +
+          list
+              .map(function (u) {
+                  return (
+                      '<option value="' +
+                      u.id +
+                      '"' +
+                      (String(u.id) === sel ? ' selected' : '') +
+                      '>' +
+                      dhHtmlText(u.full_name) +
+                      '</option>'
+                  );
+              })
+              .join('')
+      );
+  }
+  function renderDirectHireCard(row, mode, supers) {
+      var id = row.id;
+      var base = 'dhfld_' + id;
+      var st = row.status || '';
+      var head =
+          '<div class="card" style="margin-bottom:14px; border-right:4px solid var(--blue);">' +
+          '<div style="margin-bottom:10px;"><b>طلب #' +
+          id +
+          '</b> <span class="badge bg-orange">' +
+          dhHtmlText(directHireStatusLabel(st)) +
+          '</span><br><small style="color:var(--text-light)">من: ' +
+          dhHtmlText((row.initiators && row.initiators.full_name) || '—') +
+          ' · ' +
+          new Date(row.created_at).toLocaleString('ar-SA') +
+          '</small>' +
+          (row.entrants && row.entrants.full_name
+              ? '<br><small style="color:var(--text-light)">مدخل البيانات: ' + dhHtmlText(row.entrants.full_name) + '</small>'
+              : '') +
+          '</div>';
+      if (row.rejection_reason && String(st).indexOf('rejected') !== -1) {
+          head +=
+              '<p style="color:var(--red); font-size:0.9rem; margin:6px 0;">سبب الرفض: ' +
+              dhHtmlText(row.rejection_reason) +
+              '</p>';
+      }
+      if (st === 'approved' && row.worker_id) {
+          head +=
+              '<p style="color:var(--green); margin:6px 0;">تم تسجيل الموظف — رقم السجل: <b>' +
+              row.worker_id +
+              '</b></p>';
+      }
+      var body = '';
+      var editable = (mode === 'hr' && st === 'pending_hr') || (mode === 'admin' && (st === 'pending_hr' || st === 'pending_data_entry'));
+      if (editable) {
+          body +=
+              '<div class="grid-2" style="margin-top:10px;">' +
+              '<div><label class="input-label-secondary">الاسم الرباعي</label><input type="text" id="' +
+              base +
+              '_name" value="' +
+              dhAttr(row.name) +
+              '"></div>' +
+              '<div><label class="input-label-secondary">رقم الهوية / الإقامة / الجواز</label><input type="text" id="' +
+              base +
+              '_id_number" value="' +
+              dhAttr(row.id_number) +
+              '"></div></div>' +
+              '<div class="grid-3" style="margin-top:8px;">' +
+              '<div><label class="input-label-secondary">المقاول</label><select id="' +
+              base +
+              '_contractor">' +
+              dhContOptionsHtml(row.contractor_id) +
+              '</select></div>' +
+              '<div><label class="input-label-secondary">الموقع</label><select id="' +
+              base +
+              '_site">' +
+              dhSiteOptionsHtml(row.current_site_id) +
+              '</select></div>' +
+              '<div><label class="input-label-secondary">المشرف المباشر</label><select id="' +
+              base +
+              '_supervisor">' +
+              dhSuperOptionsHtml(row.assigned_supervisor_id, supers) +
+              '</select></div></div>' +
+              '<div class="grid-2" style="margin-top:8px;">' +
+              '<div><label class="input-label-secondary">نظام الدفع</label><select id="' +
+              base +
+              '_payment_type"><option value="salary"' +
+              (String(row.payment_type || 'salary') === 'salary' ? ' selected' : '') +
+              '>راتب شهري</option><option value="daily"' +
+              (String(row.payment_type) === 'daily' ? ' selected' : '') +
+              '>يومية</option></select></div>' +
+              '<div><label class="input-label-secondary">المبلغ</label><input type="number" id="' +
+              base +
+              '_salary" value="' +
+              dhAttr(row.basic_salary != null ? row.basic_salary : '') +
+              '"></div></div>' +
+              '<div class="grid-2" style="margin-top:8px;">' +
+              '<div><label class="input-label-secondary">انتهاء الإقامة</label><input type="date" id="' +
+              base +
+              '_iqama_expiry" value="' +
+              dhAttr(row.iqama_expiry || '') +
+              '"></div>' +
+              '<div><label class="input-label-secondary">أول يوم عمل</label><input type="date" id="' +
+              base +
+              '_first_day" value="' +
+              dhAttr(row.first_day_work || '') +
+              '"></div></div>';
+      } else {
+          body +=
+              '<div style="background:var(--bg-main); padding:12px; border-radius:8px; margin-top:8px; font-size:0.92rem; line-height:1.7;">' +
+              '<div><b>الاسم:</b> ' +
+              dhHtmlText(row.name) +
+              '</div><div><b>الهوية:</b> ' +
+              dhHtmlText(row.id_number) +
+              '</div><div><b>أول يوم عمل:</b> ' +
+              dhHtmlText(row.first_day_work || '—') +
+              '</div><div><b>الراتب / النوع:</b> ' +
+              dhHtmlText(row.basic_salary != null ? row.basic_salary : '—') +
+              ' / ' +
+              (row.payment_type === 'daily' ? 'يومية' : 'راتب') +
+              '</div></div>';
+      }
+      var actions = '<div class="flex-row" style="margin-top:14px; gap:8px; flex-wrap:wrap;">';
+      if (mode === 'de' && st === 'pending_data_entry') {
+          actions +=
+              '<button type="button" class="btn btn-sm btn-green" style="width:auto;" onclick="directHireDEsendToHR(' +
+              id +
+              ')">إرسال إلى الموارد البشرية</button>' +
+              '<button type="button" class="btn btn-sm btn-red" style="width:auto;" onclick="openDirectHireReject(' +
+              id +
+              ',\'data_entry\')">رفض</button>';
+      }
+      if (mode === 'hr' && st === 'pending_hr') {
+          actions +=
+              '<button type="button" class="btn btn-sm btn-outline" style="width:auto;" onclick="directHireSaveDraft(' +
+              id +
+              ')">حفظ التعديلات</button>' +
+              '<button type="button" class="btn btn-sm btn-green" style="width:auto;" onclick="directHireApproveWorker(' +
+              id +
+              ')">موافقة وتسجيل الموظف</button>' +
+              '<button type="button" class="btn btn-sm btn-red" style="width:auto;" onclick="openDirectHireReject(' +
+              id +
+              ',\'hr\')">رفض</button>';
+      }
+      if (mode === 'admin') {
+          if (st === 'pending_data_entry') {
+              actions +=
+                  '<button type="button" class="btn btn-sm btn-outline" style="width:auto;" onclick="directHireSaveDraft(' +
+                  id +
+                  ')">حفظ التعديلات</button>' +
+                  '<button type="button" class="btn btn-sm btn-outline" style="width:auto;" onclick="directHireAdminSkipToHR(' +
+                  id +
+                  ')">تخطي إلى الموارد البشرية</button>' +
+                  '<button type="button" class="btn btn-sm btn-green" style="width:auto;" onclick="directHireApproveWorker(' +
+                  id +
+                  ')">موافقة وتسجيل الموظف</button>' +
+                  '<button type="button" class="btn btn-sm btn-red" style="width:auto;" onclick="openDirectHireReject(' +
+                  id +
+                  ',\'data_entry\')">رفض</button>';
+          } else if (st === 'pending_hr') {
+              actions +=
+                  '<button type="button" class="btn btn-sm btn-outline" style="width:auto;" onclick="directHireSaveDraft(' +
+                  id +
+                  ')">حفظ التعديلات</button>' +
+                  '<button type="button" class="btn btn-sm btn-green" style="width:auto;" onclick="directHireApproveWorker(' +
+                  id +
+                  ')">موافقة وتسجيل الموظف</button>' +
+                  '<button type="button" class="btn btn-sm btn-red" style="width:auto;" onclick="openDirectHireReject(' +
+                  id +
+                  ',\'hr\')">رفض</button>';
+          }
+      }
+      actions += '</div>';
+      if (mode === 'supervisor_my' || (mode === 'de' && st !== 'pending_data_entry') || (mode === 'hr' && st !== 'pending_hr')) {
+          actions = '';
+      }
+      return head + body + actions + '</div>';
+  }
+  async function fetchDhSupervisors() {
+      var r = await sb.from('app_users').select('id, full_name').eq('role', 'supervisor').order('full_name').limit(1000);
+      return r.data || [];
+  }
+  async function renderDirectHireSupervisorPanel() {
+      var el = document.getElementById('directHireSupervisorMyList');
+      if (!el) return;
+      var sel = '*, initiators:initiator_user_id(full_name)';
+      var res = await sb.from('direct_hire_requests').select(sel).eq('initiator_user_id', CUR_USER.id).order('created_at', { ascending: false }).limit(60);
+      if (res.error) {
+          el.innerHTML =
+              '<p style="color:var(--red)">تعذر التحميل. أنشئ الجدول من الملف <code>supabase_direct_hire_requests.sql</code>.</p>';
+          return;
+      }
+      var rows = res.data || [];
+      var supers = await fetchDhSupervisors();
+      el.innerHTML = rows.length
+          ? rows.map(function (r) { return renderDirectHireCard(r, 'supervisor_my', supers); }).join('')
+          : '<p style="color:var(--text-light)">لا توجد طلبات بعد</p>';
+  }
+  async function renderDirectHireDELists() {
+      var el = document.getElementById('directHireDEpendingList');
+      if (!el) return;
+      var sel = '*, initiators:initiator_user_id(full_name)';
+      var res = await sb.from('direct_hire_requests').select(sel).eq('status', 'pending_data_entry').order('created_at', { ascending: false }).limit(80);
+      if (res.error) {
+          el.innerHTML =
+              '<p style="color:var(--red)">تعذر التحميل. نفّذ سكربت قاعدة البيانات لجدول direct_hire_requests.</p>';
+          return;
+      }
+      var rows = res.data || [];
+      var supers = await fetchDhSupervisors();
+      el.innerHTML = rows.length
+          ? rows.map(function (r) { return renderDirectHireCard(r, 'de', supers); }).join('')
+          : '<p style="color:var(--text-light)">لا توجد إشعارات معلّقة</p>';
+  }
+  async function renderDirectHireHRLists() {
+      var el = document.getElementById('directHireHRpendingList');
+      if (!el) return;
+      var sel = '*, initiators:initiator_user_id(full_name), entrants:data_entry_user_id(full_name)';
+      var res = await sb.from('direct_hire_requests').select(sel).eq('status', 'pending_hr').order('created_at', { ascending: false }).limit(80);
+      if (res.error) {
+          el.innerHTML = '<p style="color:var(--red)">تعذر التحميل.</p>';
+          return;
+      }
+      var rows = res.data || [];
+      var supers = await fetchDhSupervisors();
+      el.innerHTML = rows.length
+          ? rows.map(function (r) { return renderDirectHireCard(r, 'hr', supers); }).join('')
+          : '<p style="color:var(--text-light)">لا توجد طلبات بانتظار الاعتماد</p>';
+  }
+  async function renderDirectHireAdminLists() {
+      var el = document.getElementById('directHireAdminList');
+      if (!el) return;
+      var sel = '*, initiators:initiator_user_id(full_name), entrants:data_entry_user_id(full_name)';
+      var res = await sb.from('direct_hire_requests').select(sel).order('created_at', { ascending: false }).limit(100);
+      if (res.error) {
+          el.innerHTML = '<p style="color:var(--red)">تعذر التحميل.</p>';
+          return;
+      }
+      var rows = res.data || [];
+      var supers = await fetchDhSupervisors();
+      el.innerHTML = rows.length
+          ? rows.map(function (r) { return renderDirectHireCard(r, 'admin', supers); }).join('')
+          : '<p style="color:var(--text-light)">لا توجد طلبات</p>';
+  }
+  async function submitDirectHireRequest() {
+      if (!checkPermission('direct_hire')) return;
+      if (!CUR_USER || CUR_USER.role !== 'supervisor') return showToast('إرسال الطلب متاح للمشرف فقط', 'error');
+      var idNum = String(document.getElementById('dhNewIqama').value || '').trim();
+      var firstDay = document.getElementById('dhNewFirstDay').value || null;
+      var name = String(document.getElementById('dhNewName').value || '').trim();
+      var siteVal = document.getElementById('dhNewSite').value || null;
+      if (!name || !idNum) return showToast('يرجى إدخال الاسم ورقم الهوية / الإقامة / الجواز', 'error');
+      if (!firstDay) return showToast('يرجى تحديد تاريخ أول يوم عمل', 'error');
+      if (!isSiteAllowedForCurrentUser(siteVal)) return showToast('اختر موقعاً ضمن مواقعك المعتمدة', 'error');
+      var dupChk = await findWorkerConflictingIdentity(idNum, null);
+      if (dupChk.error) return showTechnicalToast('تعذر التحقق من الرقم: ' + sbErrMsg(dupChk.error), 'error');
+      if (dupChk.row && dupChk.row.is_deleted !== true) {
+          return showToast('الرقم مسجّل لموظف قائم — لا يمكن إنشاء طلب مكرر', 'error');
+      }
+      var pend = await sb.from('direct_hire_requests').select('id, id_number, status').in('status', ['pending_data_entry', 'pending_hr']);
+      if (!pend.error && pend.data && pend.data.length) {
+          var tnorm = normalizeIdentityKey(idNum);
+          var clash = pend.data.some(function (r) { return normalizeIdentityKey(r.id_number) === tnorm; });
+          if (clash) return showToast('يوجد طلب تعيين قائم لنفس رقم الهوية', 'error');
+      }
+      var row = {
+          status: 'pending_data_entry',
+          initiator_user_id: CUR_USER.id,
+          name: name,
+          id_number: idNum,
+          contractor_id: document.getElementById('dhNewCont').value || null,
+          current_site_id: siteVal || null,
+          assigned_supervisor_id: document.getElementById('dhNewSuper').value || null,
+          payment_type: document.getElementById('dhNewType').value || 'salary',
+          basic_salary: document.getElementById('dhNewAmt').value || null,
+          iqama_expiry: document.getElementById('dhNewIqamaExpiry').value || null,
+          first_day_work: firstDay,
+          updated_at: new Date().toISOString()
+      };
+      showLoad(true);
+      var ins = await sb.from('direct_hire_requests').insert(row);
+      showLoad(false);
+      if (ins.error) return transferFlowError('تعذر حفظ الطلب', ins.error);
+      showToast('تم الإرسال — سيظهر الإشعار لمدخل البيانات ثم للموارد البشرية');
+      document.getElementById('dhNewName').value = '';
+      document.getElementById('dhNewIqama').value = '';
+      document.getElementById('dhNewAmt').value = '';
+      document.getElementById('dhNewIqamaExpiry').value = '';
+      document.getElementById('dhNewFirstDay').value = '';
+      await renderDirectHireSupervisorPanel();
+  }
+  function openDirectHireReject(requestId, step) {
+      document.getElementById('directHireRejectRequestId').value = requestId;
+      document.getElementById('directHireRejectStep').value = step;
+      document.getElementById('directHireRejectReasonInput').value = '';
+      document.getElementById('directHireRejectModal').classList.add('open');
+  }
+  async function confirmDirectHireReject() {
+      var id = document.getElementById('directHireRejectRequestId').value;
+      var step = document.getElementById('directHireRejectStep').value;
+      var reason = (document.getElementById('directHireRejectReasonInput').value || '').trim();
+      if (!reason) return showToast('اكتب سبب الرفض', 'error');
+      var patch = { rejection_reason: reason, updated_at: new Date().toISOString() };
+      if (step === 'data_entry') patch.status = 'rejected_data_entry';
+      else if (step === 'hr') patch.status = 'rejected_hr';
+      else return closeModal('directHireRejectModal');
+      var up = await sb.from('direct_hire_requests').update(patch).eq('id', id);
+      closeModal('directHireRejectModal');
+      if (up.error) return transferFlowError('تعذر تسجيل الرفض', up.error);
+      showToast('تم تسجيل الرفض');
+      refreshDirectHireViews();
+  }
+  async function directHireDEsendToHR(requestId) {
+      if (!checkPermission('direct_hire')) return;
+      if (!CUR_USER || CUR_USER.role !== 'data_entry') return showToast('هذا الإجراء لمدخل البيانات', 'error');
+      var r = await sb.from('direct_hire_requests').select('id, status').eq('id', requestId).single();
+      if (r.error || !r.data || r.data.status !== 'pending_data_entry') return showToast('حالة الطلب غير صحيحة', 'error');
+      var up = await sb
+          .from('direct_hire_requests')
+          .update({
+              status: 'pending_hr',
+              data_entry_user_id: CUR_USER.id,
+              updated_at: new Date().toISOString()
+          })
+          .eq('id', requestId);
+      if (up.error) return transferFlowError('تعذر تحديث الطلب', up.error);
+      showToast('تم الإرسال إلى الموارد البشرية');
+      refreshDirectHireViews();
+  }
+  async function directHireAdminSkipToHR(requestId) {
+      if (!CUR_USER || CUR_USER.role !== 'admin') return showToast('للمدير فقط', 'error');
+      var r = await sb.from('direct_hire_requests').select('id, status').eq('id', requestId).single();
+      if (r.error || !r.data || r.data.status !== 'pending_data_entry') return showToast('التخطي متاح من مرحلة مدخل البيانات فقط', 'error');
+      var up = await sb
+          .from('direct_hire_requests')
+          .update({
+              status: 'pending_hr',
+              data_entry_user_id: CUR_USER.id,
+              updated_at: new Date().toISOString()
+          })
+          .eq('id', requestId);
+      if (up.error) return transferFlowError('تعذر التحديث', up.error);
+      showToast('تم تخطي المرحلة — الطلب عند الموارد البشرية');
+      refreshDirectHireViews();
+  }
+  function mapDomToRequestUpdate(body) {
+      return {
+          name: body.name,
+          id_number: body.id_number,
+          contractor_id: body.contractor_id && String(body.contractor_id).trim() ? parseInt(body.contractor_id, 10) : null,
+          current_site_id: body.current_site_id && String(body.current_site_id).trim() ? parseInt(body.current_site_id, 10) : null,
+          assigned_supervisor_id:
+              body.assigned_supervisor_id && String(body.assigned_supervisor_id).trim()
+                  ? parseInt(body.assigned_supervisor_id, 10)
+                  : null,
+          payment_type: body.payment_type || 'salary',
+          basic_salary: body.basic_salary === '' || body.basic_salary == null ? null : body.basic_salary,
+          iqama_expiry: body.iqama_expiry || null,
+          first_day_work: body.first_day_work || null,
+          updated_at: new Date().toISOString()
+      };
+  }
+  async function directHireSaveDraft(requestId) {
+      if (!checkPermission('direct_hire') && CUR_USER.role !== 'admin') return;
+      var body = readDirectHirePayloadFromDom(requestId);
+      if (!body.name || !body.id_number) return showToast('الاسم ورقم الهوية مطلوبان', 'error');
+      showLoad(true);
+      var up = await sb.from('direct_hire_requests').update(mapDomToRequestUpdate(body)).eq('id', requestId);
+      showLoad(false);
+      if (up.error) return transferFlowError('تعذر حفظ التعديلات', up.error);
+      showToast('تم حفظ التعديلات على الطلب');
+      refreshDirectHireViews();
+  }
+  async function directHireApproveWorker(requestId) {
+      if (CUR_USER.role !== 'admin' && CUR_USER.role !== 'hr') return showToast('غير مصرّح', 'error');
+      if (CUR_USER.role === 'hr' && !hasPermission('direct_hire')) return showToast('لا تملك صلاحية إشعار مباشر', 'error');
+      var r = await sb.from('direct_hire_requests').select('*').eq('id', requestId).single();
+      if (r.error || !r.data) return showToast('الطلب غير موجود', 'error');
+      var row = r.data;
+      var st = row.status;
+      if (CUR_USER.role === 'hr' && st !== 'pending_hr') return showToast('الطلب ليس بانتظار الموارد البشرية', 'error');
+      if (CUR_USER.role === 'admin' && st !== 'pending_hr' && st !== 'pending_data_entry') {
+          return showToast('لا يمكن اعتماد هذه الحالة', 'error');
+      }
+      var body = readDirectHirePayloadFromDom(requestId);
+      if (!body.name || !body.id_number) return showToast('الاسم ورقم الهوية مطلوبان', 'error');
+      if (!body.first_day_work) return showToast('حدّد تاريخ أول يوم عمل', 'error');
+      var dupChk = await findWorkerConflictingIdentity(body.id_number, null);
+      if (dupChk.error) return showTechnicalToast('تعذر التحقق من الرقم', 'error');
+      if (dupChk.row && dupChk.row.is_deleted !== true) {
+          return showToast('الرقم مسجّل لموظف قائم — راجع البيانات أو استخدم تعديل الموظف', 'error');
+      }
+      var d = {
+          id_number: body.id_number,
+          name: body.name,
+          contractor_id: body.contractor_id ? parseInt(body.contractor_id, 10) : null,
+          current_site_id: body.current_site_id ? parseInt(body.current_site_id, 10) : null,
+          assigned_supervisor_id: body.assigned_supervisor_id ? parseInt(body.assigned_supervisor_id, 10) : null,
+          payment_type: body.payment_type || 'salary',
+          basic_salary: body.basic_salary,
+          iqama_expiry: body.iqama_expiry || null,
+          is_active: true,
+          is_deleted: false,
+          first_work_date: body.first_day_work || null
+      };
+      showLoad(true);
+      var draftUp = await sb.from('direct_hire_requests').update(mapDomToRequestUpdate(body)).eq('id', requestId);
+      if (draftUp.error) {
+          showLoad(false);
+          return transferFlowError('تعذر حفظ بيانات الطلب قبل الاعتماد', draftUp.error);
+      }
+      var wid = null;
+      if (dupChk.row && dupChk.row.is_deleted === true) {
+          var upW = await sb.from('workers').update(d).eq('id', dupChk.row.id);
+          if (upW.error) {
+              var em = sbErrMsg(upW.error);
+              if (/first_work|column|schema/i.test(em)) {
+                  delete d.first_work_date;
+                  upW = await sb.from('workers').update(d).eq('id', dupChk.row.id);
+              }
+          }
+          showLoad(false);
+          if (upW.error) return transferFlowError('تعذر تحديث الموظف', upW.error);
+          wid = dupChk.row.id;
+      } else {
+          var ins = await sb.from('workers').insert(d).select('id').single();
+          if (ins.error) {
+              var em2 = sbErrMsg(ins.error);
+              if (/first_work|column|schema/i.test(em2)) {
+                  delete d.first_work_date;
+                  ins = await sb.from('workers').insert(d).select('id').single();
+              }
+          }
+          showLoad(false);
+          if (ins.error) return transferFlowError('تعذر تسجيل الموظف — نفّذ supabase_direct_hire_requests.sql لإضافة عمود first_work_date إن لزم', ins.error);
+          wid = ins.data && ins.data.id;
+      }
+      var fin = await sb
+          .from('direct_hire_requests')
+          .update({
+              status: 'approved',
+              worker_id: wid,
+              updated_at: new Date().toISOString()
+          })
+          .eq('id', requestId);
+      if (fin.error) {
+          showToast('تم تسجيل الموظف لكن تعذر تحديث حالة الطلب — راجع قاعدة البيانات', 'warning');
+      } else showToast('تم تسجيل الموظف بنجاح');
+      if (typeof loadWorkersFull === 'function') await loadWorkersFull(true);
+      if (typeof loadWorkersPageGlobalStats === 'function') await loadWorkersPageGlobalStats();
+      refreshDirectHireViews();
+  }
+
   // حفظ/استعادة فلاتر الموظفين في LocalStorage
   function saveFiltersToStorage() {
       if(!CUR_USER) return;
@@ -1937,6 +2711,7 @@
       var sr = document.getElementById('sidebarRole');
       if (su) su.innerText = profile.full_name;
       if (sr) sr.innerText = getRoleName(profile.role);
+      await initRolePermissions();
       setupPermissions();
       await loadData();
       return true;
@@ -2158,32 +2933,42 @@
       injectShowDeletedWorkersCheckbox();
       const r = CUR_USER.role;
       if(r === 'admin') {
-          ['dashboard','workers','sites','contractors','attendance','approval','reports','corrections','users','roles','transfers'].forEach(id => {
+          ['dashboard','workers','sites','contractors','attendance','approval','reports','corrections','users','roles','transfers','direct-hire'].forEach(id => {
               document.getElementById('n-'+id)?.classList.remove('hidden');
           });
+          applyReportTypeSelectOptions();
           nav('dashboard');
       } else if(r === 'hr') {
-          ['workers','sites','reports','transfers'].forEach(id => document.getElementById('n-'+id)?.classList.remove('hidden'));
-          const repType = document.getElementById('repType');
-          repType.innerHTML = `<option value="attendance_log">📅 سجل الحضور والانصراف</option><option value="workers">👷 قاعدة بيانات الموظفين</option>`;
-          nav('workers');
+          if (hasPermission('workers')) document.getElementById('n-workers')?.classList.remove('hidden');
+          if (hasPermission('sites')) document.getElementById('n-sites')?.classList.remove('hidden');
+          if (hasPermission('reports')) document.getElementById('n-reports')?.classList.remove('hidden');
+          if (hasPermission('transfers')) document.getElementById('n-transfers')?.classList.remove('hidden');
+          if (hasPermission('direct_hire')) document.getElementById('n-direct-hire')?.classList.remove('hidden');
+          applyReportTypeSelectOptions();
+          var _hrNavOrder = ['workers', 'sites', 'reports', 'transfers', 'direct-hire'];
+          var _hrPick = _hrNavOrder.find(function (x) { return hasPermission(x === 'direct-hire' ? 'direct_hire' : x); });
+          if (_hrPick) nav(_hrPick);
+          else nav('workers');
       } else if(r === 'supervisor') {
           document.getElementById('n-attendance')?.classList.remove('hidden');
-          document.getElementById('n-transfers')?.classList.remove('hidden');
+          if (hasPermission('transfers')) document.getElementById('n-transfers')?.classList.remove('hidden');
+          if (hasPermission('direct_hire')) document.getElementById('n-direct-hire')?.classList.remove('hidden');
           nav('attendance');
       } else if(r === 'data_entry') {
           document.getElementById('n-approval')?.classList.remove('hidden');
-          document.getElementById('n-transfers')?.classList.remove('hidden');
+          if (hasPermission('transfers')) document.getElementById('n-transfers')?.classList.remove('hidden');
+          if (hasPermission('direct_hire')) document.getElementById('n-direct-hire')?.classList.remove('hidden');
           nav('approval');
       }
       refreshAttendanceExcelUploadUI();
+      refreshGranularWorkersNavUi();
   }
 
   async function loadData() {
       showLoad(true);
       try {
           await withTimeout(Promise.all([loadSites(), loadConts()]), 45000, 'مهلة تحميل المواقع والمقاولين');
-          if (CUR_USER.role === 'admin' || CUR_USER.role === 'hr') { await loadWorkersFull(true); loadWorkersPageGlobalStats(); }
+          if (CUR_USER.role === 'admin' || hasPermission('workers')) { await loadWorkersFull(true); loadWorkersPageGlobalStats(); }
           if (CUR_USER.role === 'admin') loadUsers();
       } catch (e) {
           console.error('loadData', e);
@@ -2244,7 +3029,12 @@
           var el = document.getElementById(id);
           if (el) el.innerHTML = html;
       };
+      var dhSiteOpts =
+          CUR_USER && CUR_USER.role === 'supervisor'
+              ? '<option value="">اختر...</option>' + sitesForSupervisor.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')
+              : optsChoose;
       setSel('newWSite', optsChoose);
+      setSel('dhNewSite', dhSiteOpts);
       setSel('editWSite', optsChoose);
       setSel('nSiteCont', optsChoose);
       setSel('filtSite', optsAllSites);
@@ -2313,7 +3103,7 @@
       CONTS_CACHE = data || [];
       const opts = '<option value="">اختر...</option>' + CONTS_CACHE.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
       const allOpts = '<option value="">كل المقاولين</option>' + CONTS_CACHE.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-      ['newWCont','editWCont','repCont','filtCont','nSiteCont'].forEach(id => {
+      ['newWCont','editWCont','dhNewCont','repCont','filtCont','nSiteCont'].forEach(id => {
           const el = document.getElementById(id);
           if(el) el.innerHTML = id.includes('filt') || id.includes('rep') ? allOpts : opts;
       });
@@ -2362,6 +3152,10 @@
 
   // Workers
   function switchTab(t) {
+      if (t === 'add' && !hasPermission('workers_add')) {
+          showToast('لا تملك صلاحية إضافة موظف', 'error');
+          return;
+      }
       document.getElementById('hr-add-view').classList.toggle('hidden', t!='add');
       document.getElementById('hr-list-view').classList.toggle('hidden', t!='list');
       document.querySelectorAll('#v-workers .sub-tab').forEach((e,i)=>e.classList.toggle('active', (t=='list'&&i==0)||(t=='add'&&i==1)));
@@ -2554,6 +3348,8 @@
       // --- نهاية كود العدادات (يعمل على جميع النتائج المفلترة) ---
       
       // 2. عرض النتائج (بنفس الطريقة ولكن مع التأكد من استخدام res)
+      const canWT = hasPermission('workers_toggle_active');
+      const canWE = hasPermission('workers_edit');
       document.getElementById('workersList').innerHTML = res.map(w => `
       <div class="card ${w.is_active===false?'inactive-card':''} ${SELECTED_WORKERS_DELETE.has(w.id)?'selected':''}" id="worker-card-${w.id}" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:15px;">
           <div style="display:flex; align-items:center; gap:15px;">
@@ -2566,11 +3362,11 @@
               </div>
           </div>
           <div class="flex-row">
-              <label class="toggle-switch">
+              ${canWT ? `<label class="toggle-switch">
                   <input type="checkbox" ${w.is_active!==false?'checked':''} onchange="toggleWorkerActive(${w.id}, this.checked)">
                   <span class="slider"></span>
-              </label>
-              <button onclick="openEditW(${w.id})" class="btn-sm btn-outline"><i class="fa-solid fa-pen"></i></button>
+              </label>` : '<span style="color:var(--text-light);font-size:0.8rem;align-self:center;">—</span>'}
+              ${canWE ? `<button onclick="openEditW(${w.id})" class="btn-sm btn-outline"><i class="fa-solid fa-pen"></i></button>` : ''}
               ${CUR_USER.role === 'admin' ? `<button onclick="delWorker(${w.id})" class="btn-sm btn-red"><i class="fa-solid fa-trash"></i></button>` : ''}
           </div>
       </div>`).join('') || '<p style="text-align:center; color:var(--text-light);">لا يوجد نتائج</p>';
@@ -2588,7 +3384,7 @@
   }
 
   async function toggleWorkerActive(id, active) {
-      if(!checkPermission('workers')) return;
+      if(!checkPermission('workers_toggle_active')) return;
       showLoad(true);
       await sb.from('workers').update({is_active:active}).eq('id',id);
       await loadWorkersFull(true);
@@ -2597,6 +3393,7 @@
   }
 
   function openEditW(id) {
+      if (!hasPermission('workers_edit')) return showToast('لا تملك صلاحية تعديل بيانات الموظفين', 'error');
       const w = ALL_WORKERS.find(x=>x.id==id);
       document.getElementById('editWId').value=w.id;
       document.getElementById('editWName').value=w.name;
@@ -2934,6 +3731,7 @@
                   return showToast('الملف فارغ أو لا يحتوي صف بيانات بعد العناوين', 'error');
               }
               const headerRow = rows[0].map(function (c) { return c == null ? '' : String(c); });
+              showLoad(true, 'جاري تحميل بيانات الموظفين من النظام...');
               const wm = await buildWorkersMapForAttendanceUpload();
               if (wm.error) {
                   showLoad(false);
@@ -2944,9 +3742,13 @@
               const defaultSiteId = document.getElementById('attSite').value || '';
               const seenInFile = Object.create(null);
               const errorRows = [];
-              const toSave = [];
+              const preApproved = [];
+              const dataRowCount = Math.max(0, rows.length - 1);
 
               for (let i = 1; i < rows.length; i++) {
+                  if (i % 80 === 1 && dataRowCount > 0) {
+                      showLoad(true, 'جاري التحقق من الصفوف ' + (i - 1) + ' / ' + dataRowCount + '...');
+                  }
                   const row = rows[i];
                   const rawId = row && row[0];
                   const rawDate = row && row[1];
@@ -3033,36 +3835,107 @@
                       }
                   }
 
-                  const ex = await sb.from('attendance').select('id').eq('worker_id', worker.id).eq('date', isoDate).limit(1);
-                  if (ex.error) {
-                      errorRows.push(rowCopy.concat(['تعذر التحقق من التكرار: ' + sbErrMsg(ex.error)]));
-                      continue;
-                  }
-                  if (ex.data && ex.data.length > 0) {
-                      errorRows.push(rowCopy.concat(['مسجّل مسبقاً لنفس الموظف في هذا التاريخ']));
-                      continue;
-                  }
-
-                  toSave.push({
+                  preApproved.push({
+                      rowCopy: rowCopy,
                       worker_id: worker.id,
                       date: isoDate,
                       site_id: siteId || null,
                       status: st.status,
                       recorded_by: CUR_USER.id,
-                      is_approved: false,
-                      _rowCopy: rowCopy
+                      is_approved: false
+                  });
+              }
+
+              const duplicateSet = Object.create(null);
+              if (preApproved.length) {
+                  const uniqIds = [];
+                  const seenWid = Object.create(null);
+                  for (let pi = 0; pi < preApproved.length; pi++) {
+                      const wid = preApproved[pi].worker_id;
+                      const ws = String(wid);
+                      if (!seenWid[ws]) {
+                          seenWid[ws] = true;
+                          uniqIds.push(wid);
+                      }
+                  }
+                  let minD = preApproved[0].date;
+                  let maxD = preApproved[0].date;
+                  for (let di = 1; di < preApproved.length; di++) {
+                      const d = preApproved[di].date;
+                      if (d < minD) minD = d;
+                      if (d > maxD) maxD = d;
+                  }
+                  const idChunkSize = 100;
+                  const rowChunk = 1000;
+                  for (let ci = 0; ci < uniqIds.length; ci += idChunkSize) {
+                      const idChunk = uniqIds.slice(ci, ci + idChunkSize);
+                      showLoad(true, 'جاري التحقق من التكرار في النظام... ' + Math.min(ci + idChunkSize, uniqIds.length) + ' / ' + uniqIds.length + ' موظف');
+                      let fromEx = 0;
+                      while (true) {
+                          const ex = await sb.from('attendance').select('worker_id,date').gte('date', minD).lte('date', maxD).in('worker_id', idChunk).range(fromEx, fromEx + rowChunk - 1).order('id');
+                          if (ex.error) {
+                              showLoad(false);
+                              input.value = '';
+                              return showTechnicalToast('تعذر التحقق من التكرار: ' + sbErrMsg(ex.error), 'error');
+                          }
+                          const rowsEx = ex.data || [];
+                          for (let ei = 0; ei < rowsEx.length; ei++) {
+                              const r = rowsEx[ei];
+                              const dStr = r.date == null ? '' : String(r.date);
+                              duplicateSet[String(r.worker_id) + '|' + dStr.slice(0, 10)] = true;
+                          }
+                          if (rowsEx.length < rowChunk) break;
+                          fromEx += rowChunk;
+                      }
+                  }
+              }
+
+              const toSave = [];
+              for (let qi = 0; qi < preApproved.length; qi++) {
+                  const p = preApproved[qi];
+                  const pairKey = String(p.worker_id) + '|' + p.date;
+                  if (duplicateSet[pairKey]) {
+                      errorRows.push(p.rowCopy.concat(['مسجّل مسبقاً لنفس الموظف في هذا التاريخ']));
+                      continue;
+                  }
+                  toSave.push({
+                      worker_id: p.worker_id,
+                      date: p.date,
+                      site_id: p.site_id,
+                      status: p.status,
+                      recorded_by: p.recorded_by,
+                      is_approved: p.is_approved,
+                      _rowCopy: p.rowCopy
                   });
               }
 
               let saved = 0;
-              for (let k = 0; k < toSave.length; k++) {
-                  const item = toSave[k];
-                  const rowCopy = item._rowCopy;
-                  delete item._rowCopy;
-                  const ins = await sb.from('attendance').insert(item);
-                  if (ins.error) {
-                      errorRows.push(rowCopy.concat(['فشل الحفظ: ' + sbErrMsg(ins.error)]));
-                  } else saved++;
+              const insertConcurrency = 12;
+              for (let k = 0; k < toSave.length; k += insertConcurrency) {
+                  showLoad(true, 'جاري الحفظ ' + Math.min(k + insertConcurrency, toSave.length) + ' / ' + toSave.length + '...');
+                  const slice = toSave.slice(k, k + insertConcurrency);
+                  const outcomes = await Promise.all(slice.map(function (item) {
+                      const rowCopy = item._rowCopy;
+                      const payload = {
+                          worker_id: item.worker_id,
+                          date: item.date,
+                          site_id: item.site_id,
+                          status: item.status,
+                          recorded_by: item.recorded_by,
+                          is_approved: item.is_approved
+                      };
+                      return sb.from('attendance').insert(payload).then(function (ins) {
+                          return { rowCopy: rowCopy, ins: ins };
+                      });
+                  }));
+                  for (let oi = 0; oi < outcomes.length; oi++) {
+                      const o = outcomes[oi];
+                      if (o.ins.error) {
+                          errorRows.push(o.rowCopy.concat(['فشل الحفظ: ' + sbErrMsg(o.ins.error)]));
+                      } else {
+                          saved++;
+                      }
+                  }
               }
 
               if (errorRows.length > 0) {
@@ -3322,8 +4195,10 @@
   }
 
   async function genReport(format) {
-      if(!checkPermission('reports')) return;
       const type = document.getElementById('repType').value;
+      const typePerm = REPORT_TYPE_PERMISSION[type];
+      if (!type || !typePerm) return showToast('اختر نوع التقرير', 'error');
+      if (!checkPermission(typePerm)) return;
       const start = document.getElementById('repStart').value;
       const end = document.getElementById('repEnd').value;
       const siteId = document.getElementById('repSite').value;
@@ -3883,6 +4758,24 @@
   }
 
   // Roles
+  const PERMISSION_LABEL_AR = {
+      workers: 'صفحة الموظفين',
+      workers_add: 'إضافة موظف',
+      workers_edit: 'تعديل بيانات الموظف',
+      workers_toggle_active: 'تفعيل/إيقاف الموظف',
+      sites: 'المواقع',
+      attendance: 'تسجيل الحضور',
+      approval: 'اعتماد الحضور',
+      reports: 'التقارير (عام)',
+      report_payroll: 'تقرير مسير الرواتب',
+      report_attendance_log: 'تقرير سجل الحضور',
+      report_workers: 'تقرير بيانات العمال',
+      report_contractor_invoice: 'تقرير مستخلص المقاولين',
+      users: 'المستخدمين',
+      transfers: 'طلبات النقل',
+      direct_hire: 'إشعار مباشر (تعيين)'
+  };
+
   function loadRoles() {
       const tbody = document.getElementById('rolesTableBody');
       const roles = [
@@ -3891,21 +4784,22 @@
           {key: 'supervisor', name: 'مشرف موقع', desc: 'تسجيل حضور العمال في الموقع', class: 'bg-orange', icon: 'fa-hard-hat'},
           {key: 'data_entry', name: 'مدخل بيانات', desc: 'اعتماد الحضور المسجل', class: 'bg-gray', icon: 'fa-keyboard'}
       ];
-      const permissions = [
-          {key: 'workers', label: 'إدارة العمال'}, {key: 'sites', label: 'إدارة المواقع'}, {key: 'attendance', label: 'تسجيل الحضور'},
-          {key: 'approval', label: 'اعتماد الحضور'}, {key: 'reports', label: 'التقارير'}, {key: 'users', label: 'إدارة المستخدمين'}
-      ];
-      tbody.innerHTML = roles.map(role => `
-          <tr>
-              <td><span class="badge ${role.class}" style="font-size:1rem;"><i class="fa-solid ${role.icon}"></i> ${role.name}</span></td>
-              <td>${role.desc}</td>
-              ${permissions.map(perm => `<td style="text-align:center;"><label class="permission-toggle"><input type="checkbox" ${ROLE_PERMISSIONS[role.key][perm.key] ? 'checked' : ''} onchange="toggleRolePermission('${role.key}', '${perm.key}', this.checked)" ${role.key === 'admin' ? 'disabled' : ''}><span>${ROLE_PERMISSIONS[role.key][perm.key] ? '✓' : '✗'}</span></label></td>`).join('')}
-          </tr>`).join('');
+      tbody.innerHTML = roles.map(function (role) {
+          const cells = ROLE_PERMISSION_COLUMN_KEYS.map(function (permKey) {
+              const on = !!(ROLE_PERMISSIONS[role.key] && ROLE_PERMISSIONS[role.key][permKey]);
+              const dis = role.key === 'admin' ? 'disabled' : '';
+              return '<td style="text-align:center;"><label class="permission-toggle"><input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="toggleRolePermission(\'' + role.key + '\', \'' + permKey + '\', this.checked)" ' + dis + '><span>' + (on ? '✓' : '✗') + '</span></label></td>';
+          }).join('');
+          return '<tr><td><span class="badge ' + role.class + '" style="font-size:1rem;"><i class="fa-solid ' + role.icon + '"></i> ' + role.name + '</span></td><td>' + role.desc + '</td>' + cells + '</tr>';
+      }).join('');
   }
 
   function toggleRolePermission(role, permission, checked) {
+      if (role === 'admin') return;
       ROLE_PERMISSIONS[role][permission] = checked;
-      showToast(`تم ${checked ? 'تفعيل' : 'تعطيل'} صلاحية ${permission} لـ ${getRoleName(role)}`);
+      var label = PERMISSION_LABEL_AR[permission] || permission;
+      showToast('تم ' + (checked ? 'تفعيل' : 'تعطيل') + ' «' + label + '» لدور ' + getRoleName(role));
+      persistRolePermissions(role);
   }
 
   window.onload = async () => {
@@ -4081,7 +4975,7 @@ loadWorkersFull = async function (reset) {
           return '<option value="' + s.id + '">' + s.full_name + '</option>';
         })
         .join('');
-    ['newWSuper', 'editWSuper'].forEach(function (id) {
+    ['newWSuper', 'editWSuper', 'dhNewSuper'].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.innerHTML = opts;
     });
@@ -4200,7 +5094,7 @@ bulkDeleteWorkers = async function () {
 };
 
 addWorker = async function () {
-  if (!checkPermission('workers')) return;
+  if (!checkPermission('workers_add')) return;
   var idRaw = document.getElementById('newWIqama').value;
   var idNum = String(idRaw || '').trim();
   var expiry = document.getElementById('newWIqamaExpiry').value || null;
@@ -4256,7 +5150,7 @@ addWorker = async function () {
 };
 
 saveWorkerEdit = async function () {
-  if (!checkPermission('workers')) return;
+  if (!checkPermission('workers_edit')) return;
   var id = document.getElementById('editWId').value;
   var payload = {
     name: document.getElementById('editWName').value,
@@ -4507,7 +5401,7 @@ loadDashboard = async function () {
 };
 
 handleExcelUpload = async function (input) {
-  if (!checkPermission('workers')) return;
+  if (!checkPermission('workers_add')) return;
   var file = input.files[0];
   if (!file) return;
   showLoad(true);
