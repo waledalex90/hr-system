@@ -4239,7 +4239,7 @@
   }
 
   async function exportAttendanceReport(start, end, siteId) {
-      let query = sb.from('attendance').select('*, workers!inner(name,id_number), sites(name)').gte('date',start).lte('date',end).eq('is_approved',true);
+      let query = sb.from('attendance').select('*, workers(name,id_number), sites(name)').gte('date',start).lte('date',end).eq('is_approved',true);
       if(siteId) query = query.eq('site_id',siteId);
       const allData = await fetchAllData(query);
       const headers = ['التاريخ','رقم الهوية','الاسم','الموقع','الحالة'];
@@ -4250,7 +4250,7 @@
 
   async function exportPayrollReport(start, end, siteId, contId) {
       showProgress(10, 'جاري حساب الرواتب...');
-      let query = sb.from('attendance').select('*, workers!inner(*, sites(name), contractors(name))').gte('date',start).lte('date',end).eq('is_approved',true);
+      let query = sb.from('attendance').select('*, workers(*, sites(name), contractors(name))').gte('date',start).lte('date',end).eq('is_approved',true);
       const allAtt = await fetchAllData(query);
       
       const workerDays = {};
@@ -4273,7 +4273,7 @@
   }
 
   async function exportContractorReport(start, end, siteId, contId) {
-      let query = sb.from('attendance').select('*, workers!inner(*, contractors!inner(name), sites(name))').gte('date',start).lte('date',end).eq('is_approved',true);
+      let query = sb.from('attendance').select('*, workers(*, contractors(name), sites(name))').gte('date',start).lte('date',end).eq('is_approved',true);
       const allAtt = await fetchAllData(query);
       const contData = {};
       allAtt.forEach(a => {
@@ -4310,7 +4310,7 @@
   }
 
   async function exportAttendancePDF(start, end, siteId) {
-      let query = sb.from('attendance').select('*, workers!inner(name,id_number), sites(name)').gte('date',start).lte('date',end).eq('is_approved',true);
+      let query = sb.from('attendance').select('*, workers(name,id_number), sites(name)').gte('date',start).lte('date',end).eq('is_approved',true);
       if(siteId) query = query.eq('site_id',siteId);
       const allData = await fetchAllData(query);
       
@@ -4322,7 +4322,7 @@
 
   async function exportPayrollPDF(start, end, siteId, contId) {
       showProgress(10, 'جاري حساب الرواتب...');
-      let query = sb.from('attendance').select('*, workers!inner(*, sites(name), contractors(name))').gte('date',start).lte('date',end).eq('is_approved',true);
+      let query = sb.from('attendance').select('*, workers(*, sites(name), contractors(name))').gte('date',start).lte('date',end).eq('is_approved',true);
       const allAtt = await fetchAllData(query);
       
       const workerDays = {};
@@ -4345,7 +4345,7 @@
   }
 
   async function exportContractorPDF(start, end, siteId, contId) {
-      let query = sb.from('attendance').select('*, workers!inner(*, contractors!inner(name), sites(name))').gte('date',start).lte('date',end).eq('is_approved',true);
+      let query = sb.from('attendance').select('*, workers(*, contractors(name), sites(name))').gte('date',start).lte('date',end).eq('is_approved',true);
       const allAtt = await fetchAllData(query);
       const contData = {};
       allAtt.forEach(a => {
