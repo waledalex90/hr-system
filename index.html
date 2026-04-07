@@ -1225,13 +1225,20 @@
   }
 
   async function persistRolePermissions(role) {
-      if (!CUR_USER || CUR_USER.role !== 'admin' || role === 'admin') return;
+      if (!CUR_USER || CUR_USER.role !== 'admin' || role === 'admin') {
+          return { ok: false, error: 'غير مصرّح بحفظ صلاحيات هذا الدور' };
+      }
       try {
           const payload = { role: role, permissions: ROLE_PERMISSIONS[role] };
           const up = await sb.from('hr_role_permissions').upsert(payload, { onConflict: 'role' });
-          if (up.error) console.warn('persistRolePermissions', up.error);
+          if (up.error) {
+              console.warn('persistRolePermissions', up.error);
+              return { ok: false, error: typeof sbErrMsg === 'function' ? sbErrMsg(up.error) : String(up.error.message || up.error) };
+          }
+          return { ok: true };
       } catch (e) {
           console.warn('persistRolePermissions', e);
+          return { ok: false, error: e && e.message ? String(e.message) : String(e) };
       }
   }
 
@@ -1481,6 +1488,7 @@
       if(v === 'attendance') { initAttendanceFilters(); loadAttendanceRegister(); }
       if(v === 'approval') { initApprovalFilters(); loadPendingApproval(); }
       if(v === 'corrections') loadCorrections();
+      if(v === 'users') loadUsers();
       if(v === 'roles') loadRoles();
       if(v === 'transfers') refreshTransferViews();
       if(v === 'direct-hire') refreshDirectHireViews();
@@ -2950,15 +2958,55 @@
           if (_hrPick) nav(_hrPick);
           else nav('workers');
       } else if(r === 'supervisor') {
-          document.getElementById('n-attendance')?.classList.remove('hidden');
+          if (hasPermission('workers')) document.getElementById('n-workers')?.classList.remove('hidden');
+          if (hasPermission('sites')) {
+              document.getElementById('n-sites')?.classList.remove('hidden');
+              document.getElementById('n-contractors')?.classList.remove('hidden');
+          }
+          if (hasPermission('attendance')) document.getElementById('n-attendance')?.classList.remove('hidden');
+          if (hasPermission('approval')) {
+              document.getElementById('n-approval')?.classList.remove('hidden');
+              document.getElementById('n-corrections')?.classList.remove('hidden');
+          }
+          if (hasPermission('reports')) document.getElementById('n-reports')?.classList.remove('hidden');
           if (hasPermission('transfers')) document.getElementById('n-transfers')?.classList.remove('hidden');
           if (hasPermission('direct_hire')) document.getElementById('n-direct-hire')?.classList.remove('hidden');
-          nav('attendance');
+          if (hasPermission('users')) document.getElementById('n-users')?.classList.remove('hidden');
+          applyReportTypeSelectOptions();
+          var _supOrder = ['attendance', 'workers', 'sites', 'contractors', 'approval', 'reports', 'transfers', 'direct-hire', 'users', 'corrections'];
+          var _supPick = _supOrder.find(function (id) {
+              if (id === 'direct-hire') return hasPermission('direct_hire');
+              if (id === 'contractors') return hasPermission('sites');
+              if (id === 'corrections') return hasPermission('approval');
+              return hasPermission(id);
+          });
+          if (_supPick) nav(_supPick);
+          else nav('attendance');
       } else if(r === 'data_entry') {
-          document.getElementById('n-approval')?.classList.remove('hidden');
+          if (hasPermission('workers')) document.getElementById('n-workers')?.classList.remove('hidden');
+          if (hasPermission('sites')) {
+              document.getElementById('n-sites')?.classList.remove('hidden');
+              document.getElementById('n-contractors')?.classList.remove('hidden');
+          }
+          if (hasPermission('attendance')) document.getElementById('n-attendance')?.classList.remove('hidden');
+          if (hasPermission('approval')) {
+              document.getElementById('n-approval')?.classList.remove('hidden');
+              document.getElementById('n-corrections')?.classList.remove('hidden');
+          }
+          if (hasPermission('reports')) document.getElementById('n-reports')?.classList.remove('hidden');
           if (hasPermission('transfers')) document.getElementById('n-transfers')?.classList.remove('hidden');
           if (hasPermission('direct_hire')) document.getElementById('n-direct-hire')?.classList.remove('hidden');
-          nav('approval');
+          if (hasPermission('users')) document.getElementById('n-users')?.classList.remove('hidden');
+          applyReportTypeSelectOptions();
+          var _deOrder = ['workers', 'sites', 'contractors', 'attendance', 'approval', 'reports', 'transfers', 'direct-hire', 'users', 'corrections'];
+          var _dePick = _deOrder.find(function (id) {
+              if (id === 'direct-hire') return hasPermission('direct_hire');
+              if (id === 'contractors') return hasPermission('sites');
+              if (id === 'corrections') return hasPermission('approval');
+              return hasPermission(id);
+          });
+          if (_dePick) nav(_dePick);
+          else nav('approval');
       }
       refreshAttendanceExcelUploadUI();
       refreshGranularWorkersNavUi();
@@ -2969,7 +3017,7 @@
       try {
           await withTimeout(Promise.all([loadSites(), loadConts()]), 45000, 'مهلة تحميل المواقع والمقاولين');
           if (CUR_USER.role === 'admin' || hasPermission('workers')) { await loadWorkersFull(true); loadWorkersPageGlobalStats(); }
-          if (CUR_USER.role === 'admin') loadUsers();
+          if (CUR_USER.role === 'admin' || hasPermission('users')) loadUsers();
       } catch (e) {
           console.error('loadData', e);
           var hint = e && e.message ? ' (' + e.message + ')' : '';
@@ -4545,12 +4593,32 @@
       
       const selectedSites = Array.from(document.getElementById('editUSites').selectedOptions).map(o => o.value);
       showLoad(true);
-      await sb.from('app_users').update({ 
+      const { error: updErr } = await sb.from('app_users').update({ 
           full_name: document.getElementById('editUFull').value, 
           role: document.getElementById('editURole').value 
       }).eq('id',id);
-      await sb.from('user_sites').delete().eq('user_id',id);
-      if(selectedSites.length > 0) await sb.from('user_sites').insert(selectedSites.map(sid => ({ user_id: id, site_id: sid })));
+      if (updErr) {
+          showLoad(false);
+          if (typeof transferFlowError === 'function') transferFlowError('تعذر تحديث بيانات المستخدم', updErr);
+          else showTechnicalToast('تعذر تحديث بيانات المستخدم: ' + sbErrMsg(updErr), 'error');
+          return;
+      }
+      const { error: delErr } = await sb.from('user_sites').delete().eq('user_id',id);
+      if (delErr) {
+          showLoad(false);
+          if (typeof transferFlowError === 'function') transferFlowError('تم تحديث المستخدم لكن تعذر تحديث المواقع (الحذف)', delErr);
+          else showTechnicalToast('تعذر تحديث المواقع: ' + sbErrMsg(delErr), 'error');
+          return;
+      }
+      if (selectedSites.length > 0) {
+          const { error: insErr } = await sb.from('user_sites').insert(selectedSites.map(sid => ({ user_id: id, site_id: sid })));
+          if (insErr) {
+              showLoad(false);
+              if (typeof transferFlowError === 'function') transferFlowError('تم تحديث المستخدم لكن تعذر حفظ المواقع', insErr);
+              else showTechnicalToast('تعذر حفظ المواقع: ' + sbErrMsg(insErr), 'error');
+              return;
+          }
+      }
       closeModal('editUserModal');
       await loadUsers();
       showLoad(false);
@@ -4794,13 +4862,36 @@
       }).join('');
   }
 
-  function toggleRolePermission(role, permission, checked) {
+  async function toggleRolePermission(role, permission, checked) {
       if (role === 'admin') return;
+      var prev = ROLE_PERMISSIONS[role] ? ROLE_PERMISSIONS[role][permission] : undefined;
       ROLE_PERMISSIONS[role][permission] = checked;
       var label = PERMISSION_LABEL_AR[permission] || permission;
+      var res = await persistRolePermissions(role);
+      if (!res || !res.ok) {
+          if (ROLE_PERMISSIONS[role]) ROLE_PERMISSIONS[role][permission] = prev;
+          loadRoles();
+          var det = res && res.error ? res.error : '';
+          var low = String(det).toLowerCase();
+          var rls = low.indexOf('row-level security') !== -1 || low.indexOf('rls') !== -1;
+          var missing =
+              low.indexOf('does not exist') !== -1 ||
+              low.indexOf('42p01') !== -1 ||
+              low.indexOf('pgrst205') !== -1;
+          var hint = '';
+          if (missing) {
+              hint =
+                  ' أنشئ الجدول والسياسات من الملف supabase_hr_role_permissions.sql في Supabase → SQL Editor.';
+          } else if (rls) {
+              hint =
+                  ' إن كنت تستخدم دخولاً قديماً بدون Supabase Auth، تأكد أن سياسة anon على hr_role_permissions مفعّلة كما في نفس الملف.';
+          }
+          showToast('تعذر حفظ الصلاحية في قاعدة البيانات' + (det ? ': ' + det : '') + hint, 'error');
+          return;
+      }
       showToast('تم ' + (checked ? 'تفعيل' : 'تعطيل') + ' «' + label + '» لدور ' + getRoleName(role));
-      persistRolePermissions(role);
   }
+  window.toggleRolePermission = toggleRolePermission;
 
   window.onload = async () => {
       try {
